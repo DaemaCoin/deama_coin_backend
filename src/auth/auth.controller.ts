@@ -3,7 +3,9 @@ import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {
+    let i = 0;
+  }
 
   @Get('/github')
   oauthGithub(@Query('code') code: string) {
@@ -12,7 +14,9 @@ export class AuthController {
 
   @Post('/empty')
   empty(@Request() req) {
+    console.log("-----\n");
     console.log(req);
+    console.log("\n-----");
     
     return true;
   }
