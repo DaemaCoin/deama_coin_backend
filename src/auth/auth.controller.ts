@@ -12,6 +12,6 @@ export class AuthController {
 
   @Post('/empty')
   empty(@Request() req) {
-    console.log(req);
+    return req;
   }
 }
