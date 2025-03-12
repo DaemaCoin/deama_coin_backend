@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import * as Joi from 'joi';
         GITHUB_LOGIN_URL: Joi.string().required(),
       }),
     }),
+    AuthModule,
   ],
   controllers: [],
   providers: [],
