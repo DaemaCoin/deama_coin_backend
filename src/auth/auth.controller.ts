@@ -1,4 +1,4 @@
-import { Controller, Get, Logger, Post, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, Query, Response } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -13,11 +13,11 @@ export class AuthController {
   }
 
   @Post('/empty')
-  empty(@Request() req) {
+  empty(@Response() res) {
     console.log("-----\n");
-    console.log(req.body);
+    console.log(res.body);
     console.log("\n-----\n");
-    console.log(req.body.commits);
+    console.log(res.body.commits);
     console.log("\n-----\n");
     
     return true;
