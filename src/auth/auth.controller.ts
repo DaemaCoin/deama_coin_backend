@@ -15,8 +15,10 @@ export class AuthController {
   @Post('/empty')
   empty(@Request() req) {
     console.log("-----\n");
-    console.log(req);
-    console.log("\n-----");
+    console.log(req.body);
+    console.log("\n-----\n");
+    console.log(req.body.commits);
+    console.log("\n-----\n");
     
     return true;
   }
