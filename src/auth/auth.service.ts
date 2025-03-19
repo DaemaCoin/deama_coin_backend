@@ -1,10 +1,45 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EnvKeys } from 'src/common/env.keys';
+import { InvalidAccessException } from 'src/exception/custom-exception/invalid-access.exception';
 
 @Injectable()
 export class AuthService {
   constructor(private readonly configService: ConfigService) {}
+
+  async getUserRepo(githubToken: string): Promise<string[]> {
+    const res = await fetch('https://api.github.com/user/repos', {
+      method: 'get',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${githubToken}`,
+      },
+    });
+    const data = (await res.json()).map((value) => value.full_name);
+    console.log(data);
+
+    return ['ljyo2o9/My_Learn_File', 'ljyo2o9/Algorithm'];
+  }
+
+  async createHook(githubToken: string, fullName: string) {
+    await fetch(`https://api.github.com/repos/${fullName}/hooks`, {
+      method: 'post',
+      body: JSON.stringify({
+        name: 'web',
+        active: true,
+        events: ['push'],
+        config: {
+          url: 'https://daemacoin-server.xquare.app/auth/empty',
+          content_type: 'json',
+          insecure_ssl: '0',
+        },
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${githubToken}`,
+      },
+    });
+  }
 
   async oauthGithub(code: string) {
     const res = await fetch('https://github.com/login/oauth/access_token', {
@@ -20,7 +55,13 @@ export class AuthService {
       },
     });
     const data = await res.json();
-    console.log(data);
+
+    if (data.error) throw new InvalidAccessException();
+
+    const githubAccessToken = data.access_token;
+    (await this.getUserRepo(githubAccessToken)).map((value) => {
+      this.createHook(githubAccessToken, value);
+    });
 
     return code;
   }
