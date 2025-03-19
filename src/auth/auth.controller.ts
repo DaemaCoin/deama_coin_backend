@@ -9,17 +9,4 @@ export class AuthController {
   oauthGithub(@Query('code') code: string) {
     return this.authService.oauthGithub(code);
   }
-
-  @Post('/empty')
-  empty(@Request() req) {
-    console.log('\n---RES---\n');
-    console.log(req.body);
-    console.log('\n---RES_BODY---\n');
-    console.log(req.body.commits);
-    console.log('\n-----\n');
-    // console.log(req.body.commits);
-    // console.log('\n---RES_BODY_COMMITS---\n');
-
-    return true;
-  }
 }

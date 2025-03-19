@@ -29,7 +29,7 @@ export class AuthService {
         active: true,
         events: ['push'],
         config: {
-          url: 'https://daemacoin-server.xquare.app/auth/empty',
+          url: 'https://daemacoin-server.xquare.app/coin/hook',
           content_type: 'json',
           insecure_ssl: '0',
         },
