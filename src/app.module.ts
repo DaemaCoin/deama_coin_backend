@@ -13,6 +13,8 @@ import { CoinModule } from './coin/coin.module';
         GITHUB_CLIENT_ID: Joi.string().required(),
         GITHUB_SECRET_ID: Joi.string().required(),
         GITHUB_LOGIN_URL: Joi.string().required(),
+        JWT_SECRET: Joi.string().required(),
+        JWT_SECRET_RE: Joi.string().required(),
       }),
     }),
     AuthModule,

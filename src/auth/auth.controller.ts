@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Query, Request } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { LoginRequest } from './dto/request/login.request';
 
 @Controller('auth')
 export class AuthController {
@@ -8,5 +9,10 @@ export class AuthController {
   @Get('/github')
   oauthGithub(@Query('code') code: string) {
     return this.authService.oauthGithub(code);
+  }
+
+  @Get('/login')
+  login(@Body() loginRequest: LoginRequest) {
+    return this.authService.login(loginRequest);
   }
 }

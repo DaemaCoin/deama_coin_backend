@@ -2,10 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EnvKeys } from 'src/common/env.keys';
 import { InvalidAccessException } from 'src/exception/custom-exception/invalid-access.exception';
+import { LoginRequest } from './dto/request/login.request';
+import { User } from 'src/common/interface/user.interface';
+import { LoginFailException } from 'src/exception/custom-exception/login-fail.exception';
+import { JwtService } from '@nestjs/jwt';
+import { TokensResponse } from './dto/response/tokens.response';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   async getUserRepo(githubToken: string): Promise<string[]> {
     const res = await fetch('https://api.github.com/user/repos', {
@@ -64,5 +72,34 @@ export class AuthService {
     });
 
     return code;
+  }
+
+  async generateTokens(userId: string) {
+    return new TokensResponse(
+      await this.jwtService.signAsync(
+        { userId, isRefreshToken: false },
+        { secret: EnvKeys.JWT_SECRET, expiresIn: '10h' },
+      ),
+      await this.jwtService.signAsync(
+        { userId, isRefreshToken: true },
+        { secret: EnvKeys.JWT_SECRET_RE, expiresIn: '7d' },
+      ),
+    );
+  }
+
+  async login(loginRequest: LoginRequest) {
+    const res = await fetch(
+      'https://prod-server.xquare.app/dsm-login/user/user-data',
+      {
+        method: 'post',
+        body: JSON.stringify(loginRequest),
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
+
+    if (res.status != 200) throw new LoginFailException();
+
+    const data: User = await res.json();
+    return this.generateTokens(data.id);
   }
 }
