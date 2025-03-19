@@ -75,16 +75,18 @@ export class AuthService {
   }
 
   async generateTokens(userId: string) {
-    return new TokensResponse(
-      await this.jwtService.signAsync(
-        { userId, isRefreshToken: false },
-        { secret: EnvKeys.JWT_SECRET, expiresIn: '10h' },
-      ),
-      await this.jwtService.signAsync(
-        { userId, isRefreshToken: true },
-        { secret: EnvKeys.JWT_SECRET_RE, expiresIn: '7d' },
-      ),
+    const accessToken = await this.jwtService.signAsync(
+      { userId },
+      { secret: this.configService.get(EnvKeys.JWT_SECRET), expiresIn: '10h' },
     );
+    const refreshToken = await this.jwtService.signAsync(
+      { userId },
+      {
+        secret: this.configService.get(EnvKeys.JWT_SECRET_RE),
+        expiresIn: '7d',
+      },
+    );
+    return new TokensResponse(accessToken, refreshToken);
   }
 
   async login(loginRequest: LoginRequest) {
@@ -101,5 +103,9 @@ export class AuthService {
 
     const data: User = await res.json();
     return this.generateTokens(data.id);
+  }
+
+  async reIssue(userId: string) {
+    return this.generateTokens(userId);
   }
 }
