@@ -9,6 +9,7 @@ import { GetUserId } from 'src/common/decorator/get-user';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Get('/github')
   oauthGithub(@Query('code') code: string) {
     return this.authService.oauthGithub(code);
