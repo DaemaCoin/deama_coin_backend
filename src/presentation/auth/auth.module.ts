@@ -10,6 +10,9 @@ import { GithubRepositoryImpl } from 'src/infrastructure/api/github/repository/g
 import { CreateGitHookUseCase } from 'src/domain/github/usecase/create-git-hook.usecase';
 import { GetUserRepoUseCase } from 'src/domain/github/usecase/get-user-repo.usecase';
 import { GithubLoginUseCase } from 'src/domain/github/usecase/github-login.usecase';
+import { XQUARE_REPOSITORY_TOKEN } from 'src/domain/xquare/repository/xquare.repository.interface';
+import { XquareRepositoryImpl } from 'src/infrastructure/api/xquare/repository/xquare.repository-impl';
+import { GetXquareUserUsecCase } from 'src/domain/xquare/usecase/get-xquare-user.usecase';
 
 @Module({
   controllers: [AuthController],
@@ -20,6 +23,7 @@ import { GithubLoginUseCase } from 'src/domain/github/usecase/github-login.useca
     GetUserRepoUseCase,
     CreateGitHookUseCase,
     GithubLoginUseCase,
+    GetXquareUserUsecCase,
     {
       provide: JWT_REPOSITORY_TOKEN,
       useClass: JwtRepositoryImpl,
@@ -27,6 +31,10 @@ import { GithubLoginUseCase } from 'src/domain/github/usecase/github-login.useca
     {
       provide: GITHUB_REPOSITORY_TOKEN,
       useClass: GithubRepositoryImpl,
+    },
+    {
+      provide: XQUARE_REPOSITORY_TOKEN,
+      useClass: XquareRepositoryImpl,
     },
   ],
 })
