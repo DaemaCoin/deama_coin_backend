@@ -11,5 +11,7 @@ export const configModule = ConfigModule.forRoot({
     JWT_SECRET: Joi.string().required(),
     JWT_SECRET_RE: Joi.string().required(),
     XQUARE_LOGIN_URL: Joi.string().required(),
+    REDIS_HOST: Joi.string().required(),
+    REDIS_PORT: Joi.string().required(),
   }),
 });

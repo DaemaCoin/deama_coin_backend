@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EnvKeys } from 'src/common/env.keys';
 
-export const typeOrmConfig = TypeOrmModule.forRootAsync({
+export const typeOrmModule = TypeOrmModule.forRootAsync({
   inject: [ConfigService],
   useFactory: (configService: ConfigService) => ({
     type: 'mysql',
