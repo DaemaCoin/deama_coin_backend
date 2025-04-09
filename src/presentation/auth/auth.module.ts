@@ -18,24 +18,24 @@ import { GetXquareUserUsecCase } from 'src/domain/xquare/usecase/get-xquare-user
   controllers: [AuthController],
   providers: [
     AuthService,
-    GenerateAccessTokenUseCase,
-    GenerateRefreshTokenUseCase,
-    GetUserRepoUseCase,
-    CreateGitHookUseCase,
-    GithubLoginUseCase,
-    GetXquareUserUsecCase,
     {
       provide: JWT_REPOSITORY_TOKEN,
       useClass: JwtRepositoryImpl,
     },
+    GenerateAccessTokenUseCase,
+    GenerateRefreshTokenUseCase,
     {
       provide: GITHUB_REPOSITORY_TOKEN,
       useClass: GithubRepositoryImpl,
     },
+    GetUserRepoUseCase,
+    CreateGitHookUseCase,
+    GithubLoginUseCase,
     {
       provide: XQUARE_REPOSITORY_TOKEN,
       useClass: XquareRepositoryImpl,
     },
+    GetXquareUserUsecCase,
   ],
 })
 export class AuthModule {}
