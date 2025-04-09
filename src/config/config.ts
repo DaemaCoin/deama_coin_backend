@@ -10,5 +10,6 @@ export const configModule = ConfigModule.forRoot({
     GITHUB_LOGIN_URL: Joi.string().required(),
     JWT_SECRET: Joi.string().required(),
     JWT_SECRET_RE: Joi.string().required(),
+    XQUARE_LOGIN_URL: Joi.string().required(),
   }),
 });
