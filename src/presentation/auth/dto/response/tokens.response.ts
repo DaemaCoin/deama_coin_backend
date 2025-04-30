@@ -1,6 +1,9 @@
 export class TokensResponse {
-  constructor(
-    public readonly accessToken: string,
-    public readonly refreshToken: string,
-  ) {}
+  accessToken: string;
+  refreshToken: string;
+
+  constructor(accessToken: string, refreeshToken: string) {
+    this.accessToken = accessToken;
+    this.refreshToken = refreeshToken;
+  }
 }

@@ -1,41 +1,31 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UserOrmEntity } from 'src/infrastructure/database/entity/user.orm-entity';
 import { AuthController } from './controller/auth.controller';
 import { AuthService } from 'src/application/auth/auth.service';
-import { JWT_REPOSITORY_TOKEN } from 'src/domain/jwt/repository/jwt.repository.interface';
-import { JwtRepositoryImpl } from 'src/infrastructure/jwt/repository/jwt.repository-impl';
-import { GenerateAccessTokenUseCase } from 'src/domain/jwt/usecase/generate-access-token.usecase';
-import { GenerateRefreshTokenUseCase } from 'src/domain/jwt/usecase/generate-refresh-token.usecase';
-import { GITHUB_REPOSITORY_TOKEN } from 'src/domain/github/repository/github.repository.interface';
-import { GithubRepositoryImpl } from 'src/infrastructure/api/github/repository/github.repository-impl';
-import { CreateGitHookUseCase } from 'src/domain/github/usecase/create-git-hook.usecase';
-import { GetUserRepoUseCase } from 'src/domain/github/usecase/get-user-repo.usecase';
-import { GithubLoginUseCase } from 'src/domain/github/usecase/github-login.usecase';
-import { XQUARE_REPOSITORY_TOKEN } from 'src/domain/xquare/repository/xquare.repository.interface';
-import { XquareRepositoryImpl } from 'src/infrastructure/api/xquare/repository/xquare.repository-impl';
-import { GetXquareUserUsecCase } from 'src/domain/xquare/usecase/get-xquare-user.usecase';
+import { FindOneUserUseCase } from 'src/domain/user/usecase/find-one-user.usecase';
+import { SaveUserUseCase } from 'src/domain/user/usecase/save-user.usecase';
+import { USER_COMMAND_REPOSITORY_TOKEN } from 'src/domain/user/repository/user.command-repository';
+import { UserCommandRepositoryImpl } from 'src/infrastructure/database/command-repository/user.command-repository-impl';
+import { UserQueryRepositoryImpl } from 'src/infrastructure/database/query-repository/user.query-repository-impl';
+import { USER_QUERY_REPOSITORY_TOKEN } from 'src/domain/user/repository/user.query-repository';
+import { CacheModule } from '../util/cache.module';
 
 @Module({
+  imports: [TypeOrmModule.forFeature([UserOrmEntity]), CacheModule],
   controllers: [AuthController],
   providers: [
     AuthService,
+    FindOneUserUseCase,
+    SaveUserUseCase,
     {
-      provide: JWT_REPOSITORY_TOKEN,
-      useClass: JwtRepositoryImpl,
+      provide: USER_COMMAND_REPOSITORY_TOKEN,
+      useClass: UserCommandRepositoryImpl,
     },
-    GenerateAccessTokenUseCase,
-    GenerateRefreshTokenUseCase,
     {
-      provide: GITHUB_REPOSITORY_TOKEN,
-      useClass: GithubRepositoryImpl,
+      provide: USER_QUERY_REPOSITORY_TOKEN,
+      useClass: UserQueryRepositoryImpl,
     },
-    GetUserRepoUseCase,
-    CreateGitHookUseCase,
-    GithubLoginUseCase,
-    {
-      provide: XQUARE_REPOSITORY_TOKEN,
-      useClass: XquareRepositoryImpl,
-    },
-    GetXquareUserUsecCase,
   ],
 })
 export class AuthModule {}
