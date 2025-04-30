@@ -74,30 +74,4 @@ export class AuthService {
 
     return code;
   }
-
-  /// Xquare User Login
-  private async getXquareUser(
-    accountId: string,
-    password: string,
-  ): Promise<string> {
-    const res = await fetch(String(this.configService.get(EnvKeys.XQUARE_LOGIN_URL)), {
-      method: 'post',
-      body: JSON.stringify({
-        account_id: accountId,
-        password,
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    if (res.status != 200) throw new LoginFailException();
-    const data = await res.json();
-
-    return data.id;
-  }
-
-  async xquarelogin(dto: LoginRequest) {
-    const { accountId, password } = dto;
-    const xquareId = await this.getXquareUser(accountId, password);
-
-    return xquareId;
-  }
 }
