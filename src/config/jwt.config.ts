@@ -1,3 +1,5 @@
-import { JwtModuleOptions } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
 
-export const jwtConfig: JwtModuleOptions = { global: true };
+export const jwtModule = JwtModule.register({
+  global: true,
+});

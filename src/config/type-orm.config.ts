@@ -1,11 +1,8 @@
 import { ConfigService } from '@nestjs/config';
-import { TypeOrmModuleAsyncOptions } from '@nestjs/typeorm';
-import { EnvKeys } from 'src/common/enum/env-keys';
-import { DiaryOrmEntity } from 'src/infrastructure/database/entity/diary.orm-entity';
-import { PledgeOrmEntity } from 'src/infrastructure/database/entity/pledge.orm-entity';
-import { UserOrmEntity } from 'src/infrastructure/database/entity/user.orm-entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { EnvKeys } from 'src/common/env.keys';
 
-export const typeOrmConfig: TypeOrmModuleAsyncOptions = {
+export const typeOrmModule = TypeOrmModule.forRootAsync({
   inject: [ConfigService],
   useFactory: (configService: ConfigService) => ({
     type: 'mysql',
@@ -14,7 +11,7 @@ export const typeOrmConfig: TypeOrmModuleAsyncOptions = {
     username: configService.get(EnvKeys.DB_USERNAME),
     password: configService.get(EnvKeys.DB_PASSWORD),
     database: configService.get(EnvKeys.DB_DATABASE),
-    entities: [UserOrmEntity, PledgeOrmEntity, DiaryOrmEntity],
+    entities: [],
     synchronize: true,
   }),
-};
+});
