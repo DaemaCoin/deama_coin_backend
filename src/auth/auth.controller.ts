@@ -12,10 +12,4 @@ export class AuthController {
   oauthGithub(@Query('code') code: string) {
     return this.authService.githubOAuth(code);
   }
-
-  @IsPublic()
-  @Get('/xquare')
-  login(@Body() loginRequest: LoginRequest) {
-    return this.authService.xquarelogin(loginRequest);
-  }
 }
