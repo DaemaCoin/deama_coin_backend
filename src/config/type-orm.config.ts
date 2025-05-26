@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { UserEntity } from 'src/auth/entity/user.entity';
 import { EnvKeys } from 'src/common/env.keys';
 
 export const typeOrmModule = TypeOrmModule.forRootAsync({
@@ -11,7 +12,7 @@ export const typeOrmModule = TypeOrmModule.forRootAsync({
     username: configService.get(EnvKeys.DB_USERNAME),
     password: configService.get(EnvKeys.DB_PASSWORD),
     database: configService.get(EnvKeys.DB_DATABASE),
-    entities: [],
+    entities: [UserEntity],
     synchronize: true,
   }),
 });

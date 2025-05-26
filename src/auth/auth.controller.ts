@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginRequest } from './dto/request/login.request';
 import { IsPublic } from '../common/decorator/is-public';
+import { RegisterRequest } from './dto/request/register.request';
 
 @Controller('auth')
 export class AuthController {
@@ -14,8 +15,14 @@ export class AuthController {
   }
 
   @IsPublic()
-  @Get('/xquare')
+  @Post('/xquare')
   login(@Body() loginRequest: LoginRequest) {
     return this.authService.xquarelogin(loginRequest);
+  }
+
+  @IsPublic()
+  @Post('/register')
+  regiser(@Body() registerRequest: RegisterRequest) {
+    return this.authService.register(registerRequest);
   }
 }

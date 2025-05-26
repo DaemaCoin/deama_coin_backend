@@ -1,103 +1,95 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EnvKeys } from 'src/common/env.keys';
-import { InvalidAccessException } from 'src/exception/custom-exception/invalid-access.exception';
 import { LoginRequest } from './dto/request/login.request';
-import { LoginFailException } from 'src/exception/custom-exception/login-fail.exception';
+import { Repository } from 'typeorm';
+import { UserEntity } from './entity/user.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { RegisterRequest } from './dto/request/register.request';
+import { JwtService } from '@nestjs/jwt';
+import { RegisterException } from 'src/exception/custom-exception/register.exception';
+import { GithubService } from './github.service';
+import { XquareService } from './xquare.service';
+import { TokensResponse } from './dto/response/token.response';
+import { EnvKeys } from 'src/common/env.keys';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
+    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
+    private readonly githubService: GithubService,
+    private readonly xquareService: XquareService,
+  ) {}
 
-  /// GitHub APIS
-  private async getUserRepo(githubToken: string): Promise<string[]> {
-    const res = await fetch('https://api.github.com/user/repos', {
-      method: 'get',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${githubToken}`,
-      },
-    });
-    const data = (await res.json()).map(
-      (value: { full_name: string }) => value.full_name,
+  async generateTokens(userId: string) {
+    return new TokensResponse(
+      await this.jwtService.signAsync(
+        { userId },
+        { secret: this.configService.get(EnvKeys.JWT_SECRET) },
+      ),
+      await this.jwtService.signAsync(
+        { userId },
+        { secret: this.configService.get(EnvKeys.JWT_SECRET_RE) },
+      ),
     );
-    console.log(data);
-    // todo :: data로 바꾸기
-    return ['ljyo2o9/My_Learn_File'];
   }
 
-  private async createGitHook(githubToken: string, fullName: string): Promise<void> {
-    await fetch(`https://api.github.com/repos/${fullName}/hooks`, {
-      method: 'post',
-      body: JSON.stringify({
-        name: 'web',
-        active: true,
-        events: ['push'],
-        config: {
-          url: 'https://daemacoin-server.xquare.app/coin/hook',
-          content_type: 'json',
-          insecure_ssl: '0',
-        },
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${githubToken}`,
-      },
-    });
-  }
-
-  private async githubLogin(code: string): Promise<string> {
-    const res = await fetch('https://github.com/login/oauth/access_token', {
-      method: 'post',
-      body: JSON.stringify({
-        client_id: this.configService.get(EnvKeys.GITHUB_CLIENT_ID),
-        client_secret: this.configService.get(EnvKeys.GITHUB_SECRET_ID),
-        code,
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-    });
-    const data = await res.json();
-    if (data.error) throw new InvalidAccessException();
-
-    return data.access_token;
-  }
-
+  /// Github OAuth LinK 타고 들어오는 부분
   async githubOAuth(code: string) {
-    const githubAccessToken = await this.githubLogin(code);
+    const githubAccessToken = await this.githubService.githubLogin(code);
+    const githubUserId =
+      await this.githubService.getGithubUser(githubAccessToken);
 
-    (await this.getUserRepo(githubAccessToken)).forEach((repoName: string) => {
-      this.createGitHook(githubAccessToken, repoName);
-    });
+    const repos = await this.githubService.getUserRepo(githubAccessToken);
+    await Promise.all(
+      repos.map((repoName) =>
+        this.githubService.createGitHook(githubAccessToken, repoName),
+      ),
+    );
 
-    return code;
-  }
-
-  /// Xquare User Login
-  private async getXquareUser(
-    accountId: string,
-    password: string,
-  ): Promise<string> {
-    const res = await fetch(String(this.configService.get(EnvKeys.XQUARE_LOGIN_URL)), {
-      method: 'post',
-      body: JSON.stringify({
-        account_id: accountId,
-        password,
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    if (res.status != 200) throw new LoginFailException();
-    const data = await res.json();
-
-    return data.id;
+    return { githubUserId };
   }
 
   async xquarelogin(dto: LoginRequest) {
     const { accountId, password } = dto;
-    const xquareId = await this.getXquareUser(accountId, password);
+    const xquareId = await this.xquareService.xquarelogin(accountId, password);
+    const user = await this.userRepository.findOne({
+      where: { id: xquareId },
+    });
 
-    return xquareId;
+    if(user) {
+      return this.generateTokens(user.id);
+    }
+
+    return { xquareId };
+  }
+
+  async register(dto: RegisterRequest) {
+    const { xquareId, githubId } = dto;
+
+    try {
+      const user = await this.userRepository.save({
+        id: xquareId,
+        githubId,
+      });
+
+      return this.generateTokens(user.id);
+    } catch (error) {
+      throw new RegisterException();
+    }
   }
 }
+
+/*
+  회원가입 로직
+
+  1. Xqure Login - 여기서 XqureId 받기
+  2. Github Login - 여기서 GithubId 받기
+  3. Register - 이 2개 합쳐서 Regiser하기
+
+  로그인 로직
+  1. Xquare Login + User 조회, 둘다 존재하면 토큰
+  2. 아니면 xqureId 출력
+*/
