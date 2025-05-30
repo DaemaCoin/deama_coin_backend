@@ -10,5 +10,7 @@ export const configModule = ConfigModule.forRoot({
     GITHUB_LOGIN_URL: Joi.string().required(),
     JWT_SECRET: Joi.string().required(),
     JWT_SECRET_RE: Joi.string().required(),
+    X_API_Key: Joi.string().required(),
+    DEAMA_COIN_BC_SERVER_URL: Joi.string().required(),
   }),
 });

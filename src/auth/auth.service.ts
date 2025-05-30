@@ -11,6 +11,7 @@ import { GithubService } from './github.service';
 import { XquareService } from './xquare.service';
 import { TokensResponse } from './dto/response/token.response';
 import { EnvKeys } from 'src/common/env.keys';
+import { WalletService } from 'src/wallet/wallet.service';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +22,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly githubService: GithubService,
     private readonly xquareService: XquareService,
+    private readonly walletService: WalletService,
   ) {}
 
   async generateTokens(userId: string) {
@@ -70,14 +72,21 @@ export class AuthService {
     const { xquareId, githubId } = dto;
 
     try {
+      const findUser = await this.userRepository.findOne({
+        where: { id: xquareId },
+      });
+      if(findUser) throw new RegisterException();
       const user = await this.userRepository.save({
         id: xquareId,
         githubId,
       });
 
+      await this.walletService.createWallet(user.id);
+
       return this.generateTokens(user.id);
     } catch (error) {
-      throw new RegisterException();
+      await this.userRepository.delete(xquareId);
+      throw error;
     }
   }
 }

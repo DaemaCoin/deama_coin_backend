@@ -5,9 +5,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from './entity/user.entity';
 import { GithubService } from './github.service';
 import { XquareService } from './xquare.service';
+import { WalletModule } from 'src/wallet/wallet.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity])],
+  imports: [TypeOrmModule.forFeature([UserEntity]), WalletModule],
   controllers: [AuthController],
   providers: [AuthService, GithubService, XquareService],
   exports: [TypeOrmModule.forFeature([UserEntity])],
