@@ -9,6 +9,12 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @IsPublic()
+  @Get('/github')
+  oauthGithub(@Query('code') code: string) {
+    return code;
+  }
+
+  @IsPublic()
   @Post('/xquare')
   async login(@Body() loginRequest: LoginRequest) {
     return await this.authService.xquarelogin(loginRequest);
