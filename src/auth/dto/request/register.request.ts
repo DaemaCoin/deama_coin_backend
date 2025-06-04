@@ -7,5 +7,5 @@ export class RegisterRequest {
 
   @IsNotEmpty({ message: 'GithubID를 입력해주세요' })
   @IsString()
-  githubId: string;
+  code: string;
 }

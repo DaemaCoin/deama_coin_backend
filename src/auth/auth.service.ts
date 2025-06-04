@@ -41,8 +41,7 @@ export class AuthService {
   /// Github OAuth LinK 타고 들어오는 부분
   async githubOAuth(code: string) {
     const githubAccessToken = await this.githubService.githubLogin(code);
-    const githubUserId =
-      await this.githubService.getGithubUser(githubAccessToken);
+    const githubUserId = await this.githubService.getGithubUser(githubAccessToken);
 
     const repos = await this.githubService.getUserRepo(githubAccessToken);
     await Promise.all(
@@ -51,7 +50,7 @@ export class AuthService {
       ),
     );
 
-    return { githubUserId };
+    return githubUserId;
   }
 
   async xquarelogin(dto: LoginRequest) {
@@ -62,20 +61,23 @@ export class AuthService {
     });
 
     if(user) {
-      return this.generateTokens(user.id);
+      return await this.generateTokens(user.id);
     }
 
     return { xquareId };
   }
 
   async register(dto: RegisterRequest) {
-    const { xquareId, githubId } = dto;
+    const { xquareId, code } = dto;
 
     try {
       const findUser = await this.userRepository.findOne({
         where: { id: xquareId },
       });
       if(findUser) throw new RegisterException();
+
+      const githubId = await this.githubOAuth(code);
+
       const user = await this.userRepository.save({
         id: xquareId,
         githubId,
@@ -83,7 +85,7 @@ export class AuthService {
 
       await this.walletService.createWallet(user.id);
 
-      return this.generateTokens(user.id);
+      return await this.generateTokens(user.id);
     } catch (error) {
       await this.userRepository.delete(xquareId);
       throw error;

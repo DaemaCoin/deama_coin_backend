@@ -8,21 +8,21 @@ import { RegisterRequest } from './dto/request/register.request';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @IsPublic()
-  @Get('/github')
-  oauthGithub(@Query('code') code: string) {
-    return this.authService.githubOAuth(code);
-  }
+  // @IsPublic()
+  // @Get('/github')
+  // oauthGithub(@Query('code') code: string) {
+  //   return this.authService.githubOAuth(code);
+  // }
 
   @IsPublic()
   @Post('/xquare')
-  login(@Body() loginRequest: LoginRequest) {
-    return this.authService.xquarelogin(loginRequest);
+  async login(@Body() loginRequest: LoginRequest) {
+    return await this.authService.xquarelogin(loginRequest);
   }
 
   @IsPublic()
   @Post('/register')
-  regiser(@Body() registerRequest: RegisterRequest) {
-    return this.authService.register(registerRequest);
+  async regiser(@Body() registerRequest: RegisterRequest) {
+    return await this.authService.register(registerRequest);
   }
 }
