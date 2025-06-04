@@ -1,14 +1,18 @@
 import { Body, Controller, Get, Param, Post, Request } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { WalletService } from './wallet.service';
 import { IsPublic } from 'src/common/decorator/is-public';
 import { GetCommitIds } from 'src/common/decorator/get-commit-ids';
 import { GetUserId } from 'src/common/decorator/get-user-id';
 import { TransferRequest } from './dto/request/transfer.request';
 
+@ApiTags('wallet')
 @Controller('wallet')
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}
 
+  @ApiOperation({ summary: '커밋 웹훅 (코인 지급용)' })
+  @ApiResponse({ status: 200, description: '커밋 처리 성공' })
   @IsPublic()
   @Post('/hook')
   getCommits(@GetCommitIds() ids: string[]) {
@@ -18,11 +22,22 @@ export class WalletController {
     return this.walletService.commitHook(ids);
   }
 
+  @ApiOperation({ summary: '지갑 정보 조회' })
+  @ApiResponse({ status: 200, description: '지갑 정보 조회 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  @ApiResponse({ status: 404, description: '지갑을 찾을 수 없음' })
+  @ApiBearerAuth()
   @Get()
   async getWallet(@GetUserId() userId: string) {
     return await this.walletService.getWallet(userId);
   }
 
+  @ApiOperation({ summary: '코인 전송' })
+  @ApiResponse({ status: 200, description: '전송 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  @ApiResponse({ status: 400, description: '전송 실패 (잔액 부족 등)' })
+  @ApiBearerAuth()
+  @ApiBody({ type: TransferRequest })
   @Post('/transfer')
   async transfer(@GetUserId() userId: string, @Body() transferRequest: TransferRequest) {
     return await this.walletService.transfer(userId, transferRequest);

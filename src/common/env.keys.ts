@@ -22,5 +22,6 @@ export enum EnvKeys {
   X_API_Key = 'X_API_Key',
   DEAMA_COIN_BC_SERVER_URL = 'DEAMA_COIN_BC_SERVER_URL',
 
+  ADMIN_API_KEY = 'ADMIN_API_KEY',
   GEMINI_KEY = 'GEMINI_KEY',
 }
