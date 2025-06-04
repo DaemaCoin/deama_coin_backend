@@ -18,9 +18,7 @@ export class GithubService {
     const data = (await res.json()).map(
       (value: { full_name: string }) => value.full_name,
     );
-    console.log(data);
-    // todo :: data로 바꾸기
-    return ['ljyo2o9/My_Learn_File'];
+    return data;
   }
 
   async createGitHook(githubToken: string, fullName: string): Promise<void> {
