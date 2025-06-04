@@ -13,5 +13,7 @@ export const configModule = ConfigModule.forRoot({
     X_API_Key: Joi.string().required(),
     DEAMA_COIN_BC_SERVER_URL: Joi.string().required(),
     GEMINI_KEY: Joi.string().required(),
+    REDIS_HOST: Joi.string().required(),
+    REDIS_PORT: Joi.number().required(),
   }),
 });

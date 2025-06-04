@@ -15,7 +15,7 @@ export class WalletController {
     console.log('\n---COMMITS---\n');
     console.log(ids);
 
-    return true;
+    return this.walletService.addJobCommitsId(ids);
   }
 
   @Get()

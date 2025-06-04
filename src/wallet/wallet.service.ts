@@ -9,7 +9,12 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { Repository } from 'typeorm';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
 import { TransferCoinException } from 'src/exception/custom-exception/transfer-coin.exception';
-import { GenerativeModel } from '@google/generative-ai';
+import { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bull';
+import {
+  COIN_JOB_QUEUE,
+  COIN_PROCESS_COMMIT_FOR_REWARD_JOBJOB_NAME,
+} from 'src/common/global';
 
 @Injectable()
 export class WalletService {
@@ -18,8 +23,9 @@ export class WalletService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    @InjectQueue(COIN_JOB_QUEUE)
+    private coinJobQueue: Queue,
     private readonly configService: ConfigService,
-    private geminiModel: GenerativeModel,
   ) {
     this.bcServerUrl = this.configService.get(EnvKeys.DEAMA_COIN_BC_SERVER_URL);
   }
@@ -92,15 +98,14 @@ export class WalletService {
     }
   }
 
-  
-  async reward(commitContent: string): Promise<boolean> {
-    try {
-      const result = await this.geminiModel.generateContent(`커밋 내용 : ${commitContent}`);
-      const response = result.response;
-      return response.text().includes('true');
-    } catch (error) {
-      console.error('Gemini reward 기능 호출 중 오류 발생:', error);
-      throw new Error('AI 커밋 분석에 실패했습니다.');
-    }
+  async addJobCommitsId(commitIds: string[]) {
+    await Promise.all(
+      commitIds.map((commitId) =>
+        this.coinJobQueue.add(
+          COIN_PROCESS_COMMIT_FOR_REWARD_JOBJOB_NAME,
+          commitId,
+        ),
+      ),
+    );
   }
 }

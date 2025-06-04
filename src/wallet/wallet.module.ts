@@ -6,12 +6,28 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { GenerativeModel, GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
 import { EnvKeys } from 'src/common/env.keys';
+import { BullModule } from '@nestjs/bull';
+import { COIN_JOB_QUEUE } from 'src/common/global';
+import { CoinJobConsumer } from './coin-job-consumer';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity])],
+  imports: [
+    TypeOrmModule.forFeature([UserEntity]),
+    BullModule.registerQueueAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        name: COIN_JOB_QUEUE,
+        redis: {
+          host: configService.get(EnvKeys.REDIS_HOST),
+          port: configService.get(EnvKeys.REDIS_PORT),
+        },
+      }),
+    }),
+  ],
   controllers: [WalletController],
   providers: [
     WalletService,
+    CoinJobConsumer,
     {
       inject: [ConfigService],
       provide: GenerativeModel,
