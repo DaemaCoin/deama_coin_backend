@@ -5,7 +5,7 @@ export class RegisterRequest {
   @IsString()
   xquareId: string;
 
-  @IsNotEmpty({ message: 'GithubID를 입력해주세요' })
+  @IsNotEmpty({ message: 'Code를 입력해주세요' })
   @IsString()
   code: string;
 }
