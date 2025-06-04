@@ -15,6 +15,7 @@ import { CoinJobConsumer } from './coin-job-consumer';
     TypeOrmModule.forFeature([UserEntity]),
     BullModule.registerQueueAsync({
       inject: [ConfigService],
+      name: COIN_JOB_QUEUE,
       useFactory: (configService: ConfigService) => ({
         name: COIN_JOB_QUEUE,
         redis: {
