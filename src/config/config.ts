@@ -12,5 +12,6 @@ export const configModule = ConfigModule.forRoot({
     JWT_SECRET_RE: Joi.string().required(),
     X_API_Key: Joi.string().required(),
     DEAMA_COIN_BC_SERVER_URL: Joi.string().required(),
+    GEMINI_KEY: Joi.string().required(),
   }),
 });

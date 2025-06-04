@@ -9,15 +9,17 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { Repository } from 'typeorm';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
 import { TransferCoinException } from 'src/exception/custom-exception/transfer-coin.exception';
+import { GenerativeModel } from '@google/generative-ai';
 
 @Injectable()
 export class WalletService {
   bcServerUrl: string;
 
   constructor(
-    private readonly configService: ConfigService,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    private readonly configService: ConfigService,
+    private geminiModel: GenerativeModel,
   ) {
     this.bcServerUrl = this.configService.get(EnvKeys.DEAMA_COIN_BC_SERVER_URL);
   }
@@ -87,6 +89,18 @@ export class WalletService {
       return data;
     } else {
       throw new TransferCoinException(JSON.stringify(data));
+    }
+  }
+
+  
+  async reward(commitContent: string): Promise<boolean> {
+    try {
+      const result = await this.geminiModel.generateContent(`커밋 내용 : ${commitContent}`);
+      const response = result.response;
+      return response.text().includes('true');
+    } catch (error) {
+      console.error('Gemini reward 기능 호출 중 오류 발생:', error);
+      throw new Error('AI 커밋 분석에 실패했습니다.');
     }
   }
 }
