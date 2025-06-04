@@ -9,12 +9,8 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { Repository } from 'typeorm';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
 import { TransferCoinException } from 'src/exception/custom-exception/transfer-coin.exception';
-import { Queue } from 'bull';
-import { InjectQueue } from '@nestjs/bull';
-import {
-  COIN_JOB_QUEUE,
-  COIN_PROCESS_COMMIT_FOR_REWARD_JOBJOB_NAME,
-} from 'src/common/global';
+import { GenerativeModel } from '@google/generative-ai';
+import { GithubService } from 'src/auth/github.service';
 
 @Injectable()
 export class WalletService {
@@ -23,9 +19,9 @@ export class WalletService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
-    @InjectQueue(COIN_JOB_QUEUE)
-    private coinJobQueue: Queue,
+    private readonly geminiModel: GenerativeModel,
     private readonly configService: ConfigService,
+    private readonly githubSerivice: GithubService,
   ) {
     this.bcServerUrl = this.configService.get(EnvKeys.DEAMA_COIN_BC_SERVER_URL);
   }
@@ -100,12 +96,60 @@ export class WalletService {
 
   async addJobCommitsId(commitIds: string[]) {
     await Promise.all(
-      commitIds.map((commitId) =>
-        this.coinJobQueue.add(
-          COIN_PROCESS_COMMIT_FOR_REWARD_JOBJOB_NAME,
-          commitId,
-        ),
-      ),
+      commitIds.map(async (commitId) => {
+        // Push된 커밋 Id들 중 하나의 Diff를 구함
+        const commitData = await this.githubSerivice.getCommitData(commitId);
+
+        // 그 하나의 내용을 reward 점수로써 표현
+        const commitPatchDatas: string[] = commitData.files.map((v) => v.patch);
+        const commitScore = await this.getRewardScore(
+          commitPatchDatas.join(', '),
+        );
+
+        // commitData.committer.login으로 유저를 찾아서 해당 유저의 XQARE ID 찾기
+        const user = await this.userRepository.findOne({
+          where: { githubId: commitData.committer.login },
+        });
+
+        // 표현된 점수를 블록체인 서버에 보내기
+        await this.postReward(user.id, commitData.sha, commitScore);
+      }),
     );
+  }
+
+  async getRewardScore(commitContent: string): Promise<number> {
+    try {
+      const result = await this.geminiModel.generateContent(
+        `커밋 내용 : ${commitContent}`,
+      );
+      const response = result.response;
+      return Number(response.text().trim());
+    } catch (error) {
+      console.error('Gemini reward 기능 호출 중 오류 발생:', error);
+      throw new Error('AI 커밋 분석에 실패했습니다.');
+    }
+  }
+
+  async postReward(owner: string, commitHash: string, commitScore: number) {
+    const res = await fetch(`${this.bcServerUrl}/api/wallet/reward`, {
+      method: 'post',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': this.configService.get(EnvKeys.X_API_Key),
+      },
+      body: JSON.stringify({
+        owner,
+        commitHash,
+        amount: commitScore,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (res.status == 202) {
+      return data;
+    } else {
+      throw new CreateWalletException(JSON.stringify(data));
+    }
   }
 }

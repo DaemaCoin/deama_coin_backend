@@ -73,4 +73,16 @@ export class GithubService {
 
     return data.login;
   }
+
+  async getCommitData(commitId: string) {
+    const res = await fetch(`https://api.github.com/repos/DaemaCoin/deama_coin_backend/commits/${commitId}`, {
+      method: 'get',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const data = await res.json();
+
+    return data;
+  }
 }

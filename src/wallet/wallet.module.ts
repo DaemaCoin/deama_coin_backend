@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { WalletController } from './wallet.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -6,29 +6,16 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { GenerativeModel, GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
 import { EnvKeys } from 'src/common/env.keys';
-import { BullModule } from '@nestjs/bull';
-import { COIN_JOB_QUEUE } from 'src/common/global';
-import { CoinJobConsumer } from './coin-job-consumer';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserEntity]),
-    BullModule.registerQueueAsync({
-      inject: [ConfigService],
-      name: COIN_JOB_QUEUE,
-      useFactory: (configService: ConfigService) => ({
-        name: COIN_JOB_QUEUE,
-        redis: {
-          host: configService.get(EnvKeys.REDIS_HOST),
-          port: configService.get(EnvKeys.REDIS_PORT),
-        },
-      }),
-    }),
+    forwardRef(() => AuthModule),
   ],
   controllers: [WalletController],
   providers: [
     WalletService,
-    CoinJobConsumer,
     {
       inject: [ConfigService],
       provide: GenerativeModel,
