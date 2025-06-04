@@ -15,13 +15,13 @@ export class CoinJobConsumer {
     console.log(job.data);
   }
 
-  async reward(commitContent: string): Promise<boolean> {
+  async reward(commitContent: string): Promise<number> {
     try {
       const result = await this.geminiModel.generateContent(
         `커밋 내용 : ${commitContent}`,
       );
       const response = result.response;
-      return response.text().includes('true');
+      return Number(response.text().trim());
     } catch (error) {
       console.error('Gemini reward 기능 호출 중 오류 발생:', error);
       throw new Error('AI 커밋 분석에 실패했습니다.');
