@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { EnvKeys } from 'src/common/env.keys';
+import { CoinEntity } from 'src/wallet/entity/commit.entity';
 
 export const typeOrmModule = TypeOrmModule.forRootAsync({
   inject: [ConfigService],
@@ -12,7 +13,7 @@ export const typeOrmModule = TypeOrmModule.forRootAsync({
     username: configService.get(EnvKeys.DB_USERNAME),
     password: configService.get(EnvKeys.DB_PASSWORD),
     database: configService.get(EnvKeys.DB_DATABASE),
-    entities: [UserEntity],
+    entities: [UserEntity, CoinEntity],
     synchronize: true,
   }),
 });

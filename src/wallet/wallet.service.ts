@@ -11,6 +11,7 @@ import { UserNotFoundException } from 'src/exception/custom-exception/user-not-f
 import { TransferCoinException } from 'src/exception/custom-exception/transfer-coin.exception';
 import { GenerativeModel } from '@google/generative-ai';
 import { GithubService } from 'src/auth/github.service';
+import { CoinEntity } from './entity/commit.entity';
 
 @Injectable()
 export class WalletService {
@@ -19,6 +20,8 @@ export class WalletService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(CoinEntity)
+    private readonly coinRepository: Repository<CoinEntity>,
     private readonly geminiModel: GenerativeModel,
     private readonly configService: ConfigService,
     private readonly githubSerivice: GithubService,
@@ -94,8 +97,8 @@ export class WalletService {
     }
   }
 
-  async addJobCommitsId(commitIds: string[]) {
-    await Promise.all(
+  async commitHook(commitIds: string[]) {
+    await Promise.allSettled(
       commitIds.map(async (commitId) => {
         // Push된 커밋 Id들 중 하나의 Diff를 구함
         const commitData = await this.githubSerivice.getCommitData(commitId);
@@ -110,9 +113,20 @@ export class WalletService {
         const user = await this.userRepository.findOne({
           where: { githubId: commitData.committer.login },
         });
+        if(!user) throw new UserNotFoundException();
 
         // 표현된 점수를 블록체인 서버에 보내기
         await this.postReward(user.id, commitData.sha, commitScore);
+
+        await this.coinRepository.save({
+          id: commitData.sha,
+          amount: commitScore,
+          contents: 'COMMIT',
+        });
+
+        await this.userRepository.update(user.id, {
+          totalCoins: user.totalCoins + 1,
+        });
       }),
     );
   }

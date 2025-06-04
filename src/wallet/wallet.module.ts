@@ -7,10 +7,11 @@ import { GenerativeModel, GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
 import { EnvKeys } from 'src/common/env.keys';
 import { AuthModule } from 'src/auth/auth.module';
+import { CoinEntity } from './entity/commit.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntity]),
+    TypeOrmModule.forFeature([UserEntity, CoinEntity]),
     forwardRef(() => AuthModule),
   ],
   controllers: [WalletController],

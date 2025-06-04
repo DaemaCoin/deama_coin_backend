@@ -15,7 +15,7 @@ export class WalletController {
     console.log('\n---COMMITS---\n');
     console.log(ids);
 
-    return this.walletService.addJobCommitsId(ids);
+    return this.walletService.commitHook(ids);
   }
 
   @Get()
@@ -26,5 +26,11 @@ export class WalletController {
   @Post('/transfer')
   async transfer(@GetUserId() userId: string, @Body() transferRequest: TransferRequest) {
     return await this.walletService.transfer(userId, transferRequest);
+  }
+
+  @IsPublic()
+  @Get('/empty')
+  async empty(@Body('text') text: string[]) {
+    return await this.walletService.commitHook(text)
   }
 }
