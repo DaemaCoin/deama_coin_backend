@@ -76,9 +76,9 @@ export class GithubService {
     return { id: data.login, image: data.avatar_url };
   }
 
-  async getCommitData(commitId: string) {
+  async getCommitData(fullName: string, commitId: string) {
     const res = await fetch(
-      `https://api.github.com/repos/DaemaCoin/deama_coin_backend/commits/${commitId}`,
+      `https://api.github.com/repos/${fullName}/commits/${commitId}`,
       {
         method: 'get',
         headers: {

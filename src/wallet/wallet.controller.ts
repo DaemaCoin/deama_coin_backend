@@ -1,8 +1,14 @@
 import { Body, Controller, Get, Param, Post, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiBody,
+} from '@nestjs/swagger';
 import { WalletService } from './wallet.service';
 import { IsPublic } from 'src/common/decorator/is-public';
-import { GetCommitIds } from 'src/common/decorator/get-commit-ids';
+import { GetCommitData } from 'src/common/decorator/get-commit-ids';
 import { GetUserId } from 'src/common/decorator/get-user-id';
 import { TransferRequest } from './dto/request/transfer.request';
 
@@ -15,11 +21,11 @@ export class WalletController {
   @ApiResponse({ status: 200, description: '커밋 처리 성공' })
   @IsPublic()
   @Post('/hook')
-  getCommits(@GetCommitIds() ids: string[]) {
-    console.log('\n---COMMITS---\n');
-    console.log(ids);
-
-    return this.walletService.commitHook(ids);
+  getCommits(
+    @GetCommitData() commitData: { fullName: string; commitIds: string[] },
+  ) {
+    const { fullName, commitIds } = commitData;
+    return this.walletService.commitHook(fullName, commitIds);
   }
 
   @ApiOperation({ summary: '지갑 정보 조회' })
@@ -39,7 +45,10 @@ export class WalletController {
   @ApiBearerAuth()
   @ApiBody({ type: TransferRequest })
   @Post('/transfer')
-  async transfer(@GetUserId() userId: string, @Body() transferRequest: TransferRequest) {
+  async transfer(
+    @GetUserId() userId: string,
+    @Body() transferRequest: TransferRequest,
+  ) {
     return await this.walletService.transfer(userId, transferRequest);
   }
 }

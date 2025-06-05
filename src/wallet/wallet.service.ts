@@ -100,12 +100,12 @@ export class WalletService {
     }
   }
 
-  async commitHook(commitIds: string[]) {
+  async commitHook(fullName: string, commitIds: string[]) {
     const results = await Promise.allSettled(
       commitIds.map(async (commitId) => {
         try {
           // Push된 커밋 Id들 중 하나의 Diff를 구함
-          const commitData = await this.githubSerivice.getCommitData(commitId);
+          const commitData = await this.githubSerivice.getCommitData(fullName, commitId);
 
           // 그 하나의 내용을 reward 점수로써 표현
           const commitPatchDatas: string[] = commitData.files.map(
