@@ -20,6 +20,7 @@ export const typeOrmModule = TypeOrmModule.forRootAsync({
     database: configService.get(EnvKeys.DB_DATABASE),
     entities: [
       UserEntity,
+      CoinEntity,
       StoreApplicationEntity,
       StoreEntity,
       ProductEntity,
