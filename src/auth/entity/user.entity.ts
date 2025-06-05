@@ -14,6 +14,9 @@ export class UserEntity {
   githubId: string;
 
   @Column()
+  githubImageUrl: string;
+
+  @Column()
   totalCoins: number
 
   @OneToMany(() => CoinEntity, (coin) => coin.user)

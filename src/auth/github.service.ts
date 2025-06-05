@@ -60,7 +60,9 @@ export class GithubService {
     return data.access_token;
   }
 
-  async getGithubUser(githubToken: string): Promise<string> {
+  async getGithubUser(
+    githubToken: string,
+  ): Promise<{ id: string; image: string }> {
     const res = await fetch('https://api.github.com/user', {
       method: 'get',
       headers: {
@@ -71,16 +73,19 @@ export class GithubService {
     const data = await res.json();
     if (data.error) throw new InvalidAccessException();
 
-    return data.login;
+    return { id: data.login, image: data.avatar_url };
   }
 
   async getCommitData(commitId: string) {
-    const res = await fetch(`https://api.github.com/repos/DaemaCoin/deama_coin_backend/commits/${commitId}`, {
-      method: 'get',
-      headers: {
-        'Content-Type': 'application/json',
+    const res = await fetch(
+      `https://api.github.com/repos/DaemaCoin/deama_coin_backend/commits/${commitId}`,
+      {
+        method: 'get',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       },
-    });
+    );
     const data = await res.json();
 
     return data;

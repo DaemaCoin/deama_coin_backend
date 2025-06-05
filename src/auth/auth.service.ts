@@ -76,12 +76,13 @@ export class AuthService {
       });
       if(findUser) throw new RegisterException();
 
-      const githubId = await this.githubOAuth(code);
+      const { id, image } = await this.githubOAuth(code);
 
       const user = await this.userRepository.save({
         id: xquareId,
-        githubId,
-        totalCoins: 0
+        githubId: id,
+        totalCoins: 0,
+        githubImageUrl: image
       });
 
       await this.walletService.createWallet(user.id);
