@@ -29,7 +29,7 @@ export class GithubService {
         active: true,
         events: ['push'],
         config: {
-          url: 'https://daemacoin-server.xquare.app/coin/hook',
+          url: 'https://daemacoin-server.xquare.app/wallet/hook',
           content_type: 'json',
           insecure_ssl: '0',
         },
