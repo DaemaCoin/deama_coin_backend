@@ -93,6 +93,10 @@ export class AuthService {
       throw error;
     }
   }
+
+  async getUserProfile(userId: string) {
+    return await this.userRepository.findOne({ where: { id: userId } });
+  }
 }
 
 /*
