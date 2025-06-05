@@ -15,7 +15,8 @@ import { CoinEntity } from './entity/commit.entity';
 
 @Injectable()
 export class WalletService {
-  bcServerUrl: string;
+  private readonly bcServerUrl: string;
+  private readonly xApiKey: string;  
 
   constructor(
     @InjectRepository(UserEntity)
@@ -27,6 +28,7 @@ export class WalletService {
     private readonly githubSerivice: GithubService,
   ) {
     this.bcServerUrl = this.configService.get(EnvKeys.DEAMA_COIN_BC_SERVER_URL);
+    this.xApiKey = this.configService.get(EnvKeys.X_API_Key);
   }
 
   async createWallet(owner: string) {
@@ -34,7 +36,7 @@ export class WalletService {
       method: 'post',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': this.configService.get(EnvKeys.X_API_Key),
+        'X-API-Key': this.xApiKey,
       },
       body: JSON.stringify({
         owner: owner,
@@ -56,7 +58,7 @@ export class WalletService {
       method: 'get',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': this.configService.get(EnvKeys.X_API_Key),
+        'X-API-Key': this.xApiKey,
       },
     });
 
@@ -79,7 +81,7 @@ export class WalletService {
       method: 'post',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': this.configService.get(EnvKeys.X_API_Key),
+        'X-API-Key': this.xApiKey,
       },
       body: JSON.stringify({
         from: owner,
@@ -149,7 +151,7 @@ export class WalletService {
       method: 'post',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': this.configService.get(EnvKeys.X_API_Key),
+        'X-API-Key': this.xApiKey,
       },
       body: JSON.stringify({
         owner,

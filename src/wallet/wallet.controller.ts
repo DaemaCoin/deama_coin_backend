@@ -42,10 +42,4 @@ export class WalletController {
   async transfer(@GetUserId() userId: string, @Body() transferRequest: TransferRequest) {
     return await this.walletService.transfer(userId, transferRequest);
   }
-
-  @IsPublic()
-  @Get('/empty')
-  async empty(@Body('text') text: string[]) {
-    return await this.walletService.commitHook(text)
-  }
 }
