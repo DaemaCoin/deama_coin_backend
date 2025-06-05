@@ -81,6 +81,7 @@ export class AuthService {
       const user = await this.userRepository.save({
         id: xquareId,
         githubId,
+        totalCoins: 0
       });
 
       await this.walletService.createWallet(user.id);
