@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards, Request, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { StoreService } from './store.service';
 import { CreateStoreApplicationDto } from './dto/store-application.dto';
@@ -65,7 +65,11 @@ export class StoreController {
   @Public()
   @Get(':storeId/products')
   async getStoreProducts(@Param('storeId') storeId: string) {
-    return this.storeService.getStoreProducts(parseInt(storeId));
+    const parsedStoreId = parseInt(storeId);
+    if (isNaN(parsedStoreId)) {
+      throw new BadRequestException('유효하지 않은 상점 ID입니다.');
+    }
+    return this.storeService.getStoreProducts(parsedStoreId);
   }
 
   // 주문 생성 (누구나 접근 가능 - QR 스캔용)
@@ -77,7 +81,11 @@ export class StoreController {
   @Public()
   @Post(':storeId/orders')
   async createOrder(@Param('storeId') storeId: string, @Body() dto: CreateOrderDto) {
-    return this.storeService.createOrder(parseInt(storeId), dto);
+    const parsedStoreId = parseInt(storeId);
+    if (isNaN(parsedStoreId)) {
+      throw new BadRequestException('유효하지 않은 상점 ID입니다.');
+    }
+    return this.storeService.createOrder(parsedStoreId, dto);
   }
 
   // 내 주문 목록 조회 (상점 JWT 필요)
@@ -101,6 +109,10 @@ export class StoreController {
   @Post('orders/:orderId/complete')
   async completeOrder(@Request() req, @Param('orderId') orderId: string) {
     const storeId = req.user.sub;
-    return this.storeService.completeOrder(storeId, parseInt(orderId));
+    const parsedOrderId = parseInt(orderId);
+    if (isNaN(parsedOrderId)) {
+      throw new BadRequestException('유효하지 않은 주문 ID입니다.');
+    }
+    return this.storeService.completeOrder(storeId, parsedOrderId);
   }
 } 
