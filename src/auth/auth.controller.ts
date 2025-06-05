@@ -1,5 +1,11 @@
 import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginRequest } from './dto/request/login.request';
 import { IsPublic } from '../common/decorator/is-public';
@@ -37,10 +43,11 @@ export class AuthController {
     return await this.authService.register(registerRequest);
   }
 
-  @Get('/user')
   @ApiOperation({ summary: '유저 프로필 조회' })
   @ApiResponse({ status: 200, description: '유저 프로필 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
+  @ApiBearerAuth()
+  @Get('/user')
   async getUserProfile(@GetUserId() userId: string) {
     return await this.authService.getUserProfile(userId);
   }
