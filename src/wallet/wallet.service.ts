@@ -12,6 +12,7 @@ import { TransferCoinException } from 'src/exception/custom-exception/transfer-c
 import { GenerativeModel } from '@google/generative-ai';
 import { GithubService } from 'src/auth/github.service';
 import { CoinEntity } from './entity/commit.entity';
+import { GetRewardScoreException } from 'src/exception/custom-exception/get-reward-score.exception';
 
 @Injectable()
 export class WalletService {
@@ -142,7 +143,7 @@ export class WalletService {
       return Number(response.text().trim());
     } catch (error) {
       console.error('Gemini reward 기능 호출 중 오류 발생:', error);
-      throw new Error('AI 커밋 분석에 실패했습니다.');
+      throw new GetRewardScoreException();
     }
   }
 
