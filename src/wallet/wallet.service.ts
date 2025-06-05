@@ -125,6 +125,7 @@ export class WalletService {
           id: commitData.sha,
           amount: commitScore,
           contents: 'COMMIT',
+          user: { id: user.id },
         });
 
         await this.userRepository.update(user.id, {
