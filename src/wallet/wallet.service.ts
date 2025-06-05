@@ -17,7 +17,7 @@ import { GetRewardScoreException } from 'src/exception/custom-exception/get-rewa
 @Injectable()
 export class WalletService {
   private readonly bcServerUrl: string;
-  private readonly xApiKey: string;  
+  private readonly xApiKey: string;
 
   constructor(
     @InjectRepository(UserEntity)
@@ -101,38 +101,57 @@ export class WalletService {
   }
 
   async commitHook(commitIds: string[]) {
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       commitIds.map(async (commitId) => {
-        // Push된 커밋 Id들 중 하나의 Diff를 구함
-        const commitData = await this.githubSerivice.getCommitData(commitId);
+        try {
+          // Push된 커밋 Id들 중 하나의 Diff를 구함
+          const commitData = await this.githubSerivice.getCommitData(commitId);
 
-        // 그 하나의 내용을 reward 점수로써 표현
-        const commitPatchDatas: string[] = commitData.files.map((v) => v.patch);
-        const commitScore = await this.getRewardScore(
-          commitPatchDatas.join(', '),
-        );
+          // 그 하나의 내용을 reward 점수로써 표현
+          const commitPatchDatas: string[] = commitData.files.map(
+            (v) => v.patch,
+          );
+          const commitScore = await this.getRewardScore(
+            commitPatchDatas.join(', '),
+          );
 
-        // commitData.committer.login으로 유저를 찾아서 해당 유저의 XQARE ID 찾기
-        const user = await this.userRepository.findOne({
-          where: { githubId: commitData.committer.login },
-        });
-        if(!user) throw new UserNotFoundException();
+          // commitData.committer.login으로 유저를 찾아서 해당 유저의 XQARE ID 찾기
+          const user = await this.userRepository.findOne({
+            where: { githubId: commitData.committer.login },
+          });
+          if (!user) throw new UserNotFoundException();
 
-        // 표현된 점수를 블록체인 서버에 보내기
-        await this.postReward(user.id, commitData.sha, commitScore);
+          // 표현된 점수를 블록체인 서버에 보내기
+          await this.postReward(user.id, commitData.sha, commitScore);
 
-        await this.coinRepository.save({
-          id: commitData.sha,
-          amount: commitScore,
-          contents: 'COMMIT',
-          user: { id: user.id },
-        });
+          await this.coinRepository.save({
+            id: commitData.sha,
+            amount: commitScore,
+            contents: 'COMMIT',
+            user: { id: user.id },
+          });
 
-        await this.userRepository.update(user.id, {
-          totalCommits: user.totalCommits + 1,
-        });
+          await this.userRepository.update(user.id, {
+            totalCommits: user.totalCommits + 1,
+          });
+        } catch (error) {
+          // 에러 발생 시 로그 수집
+          console.error(`Error processing commitId ${commitId}:`, error);
+        }
       }),
     );
+
+    // 전체 결과를 리턴하거나, 실패한 커밋 ID를 모아서 후처리 가능
+    const failedCommits = results
+      .map((res, i) => (res.status === 'rejected' ? commitIds[i] : null))
+      .filter((v): v is string => v !== null);
+
+    if (failedCommits.length > 0) {
+      console.warn(
+        `Some commits failed to process: ${failedCommits.join(', ')}`,
+      );
+      // 필요하면 여기서 관리자 알림이나 재시도 로직 추가
+    }
   }
 
   async getRewardScore(commitContent: string): Promise<number> {
