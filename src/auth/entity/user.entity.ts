@@ -17,7 +17,7 @@ export class UserEntity {
   githubImageUrl: string;
 
   @Column()
-  totalCoins: number
+  totalCommits: number
 
   @OneToMany(() => CoinEntity, (coin) => coin.user)
   coins: CoinEntity[]

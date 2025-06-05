@@ -129,7 +129,7 @@ export class WalletService {
         });
 
         await this.userRepository.update(user.id, {
-          totalCoins: user.totalCoins + 1,
+          totalCommits: user.totalCommits + 1,
         });
       }),
     );
