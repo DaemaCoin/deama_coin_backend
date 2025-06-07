@@ -56,7 +56,7 @@ export class WalletController {
   @ApiOperation({ summary: '코인 히스토리 조회', description: '지갑에서 코인 획득 및 사용 내역을 페이지 단위로 조회합니다.' })
   @ApiResponse({ status: 200, description: '히스토리 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: '페이지 번호 (기본값: 1)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: '페이지 번호 (기본값: 0)' })
   @ApiBearerAuth()
   @Get('/history')
   async getCoinHistory(
