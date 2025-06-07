@@ -26,16 +26,23 @@ export class AuthService {
   ) {}
 
   async generateTokens(userId: string) {
-    return new TokensResponse(
-      await this.jwtService.signAsync(
-        { userId },
-        { secret: this.configService.get(EnvKeys.JWT_SECRET) },
-      ),
-      await this.jwtService.signAsync(
-        { userId },
-        { secret: this.configService.get(EnvKeys.JWT_SECRET_RE) },
-      ),
+    const accessToken = await this.jwtService.signAsync(
+      { userId },
+      {
+        secret: this.configService.get(EnvKeys.JWT_SECRET),
+        expiresIn: '6h',
+      },
     );
+
+    const refreshToken = await this.jwtService.signAsync(
+      { userId },
+      {
+        secret: this.configService.get(EnvKeys.JWT_SECRET_RE),
+        expiresIn: '7d',
+      },
+    );
+
+    return new TokensResponse(accessToken, refreshToken);
   }
 
   /// Github OAuth LinK 타고 들어오는 부분
@@ -60,7 +67,7 @@ export class AuthService {
       where: { id: xquareId },
     });
 
-    if(user) {
+    if (user) {
       return await this.generateTokens(user.id);
     }
 
@@ -74,7 +81,7 @@ export class AuthService {
       const findUser = await this.userRepository.findOne({
         where: { id: xquareId },
       });
-      if(findUser) throw new RegisterException();
+      if (findUser) throw new RegisterException();
 
       const { id, image } = await this.githubOAuth(code);
 
@@ -82,7 +89,7 @@ export class AuthService {
         id: xquareId,
         githubId: id,
         totalCoins: 0,
-        githubImageUrl: image
+        githubImageUrl: image,
       });
 
       await this.walletService.createWallet(user.id);
