@@ -16,7 +16,10 @@ export class CoinEntity {
   amount: number;
 
   @Column()
-  contents: string;
+  message: string;
+
+  @Column()
+  repoName: string;
 
   @ManyToOne(() => UserEntity, (user) => user.coins)
   user: UserEntity;
