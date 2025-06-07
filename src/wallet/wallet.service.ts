@@ -118,9 +118,9 @@ export class WalletService {
             commitPatchDatas.join(', '),
           );
 
-          // commitData.committer.login으로 유저를 찾아서 해당 유저의 XQARE ID 찾기
+          // commitData.author.name으로 유저를 찾아서 해당 유저의 XQARE ID 찾기
           const user = await this.userRepository.findOne({
-            where: { githubId: commitData.committer.login },
+            where: { githubId: commitData.author.name },
           });
           if (!user) throw new UserNotFoundException();
 
