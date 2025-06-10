@@ -15,5 +15,6 @@ export const configModule = ConfigModule.forRoot({
     GEMINI_KEY: Joi.string().required(),
     REDIS_HOST: Joi.string().required(),
     REDIS_PORT: Joi.number().required(),
+    ADMIN_API_KEY: Joi.string().required(),
   }),
 });

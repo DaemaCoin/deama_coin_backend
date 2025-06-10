@@ -120,7 +120,7 @@ export class WalletService {
 
           // commitData.author.name으로 유저를 찾아서 해당 유저의 XQARE ID 찾기
           const user = await this.userRepository.findOne({
-            where: { githubId: commitData.author.name },
+            where: { githubId: commitData.author.login },
           });
           if (!user) throw new UserNotFoundException();
 
@@ -154,7 +154,6 @@ export class WalletService {
       console.warn(
         `Some commits failed to process: ${failedCommits.join(', ')}`,
       );
-      // 필요하면 여기서 관리자 알림이나 재시도 로직 추가
     }
   }
 

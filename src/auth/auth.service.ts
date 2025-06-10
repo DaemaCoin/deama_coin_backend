@@ -45,7 +45,6 @@ export class AuthService {
     return new TokensResponse(accessToken, refreshToken);
   }
 
-  /// Github OAuth LinK 타고 들어오는 부분
   async githubOAuth(code: string) {
     const githubAccessToken = await this.githubService.githubLogin(code);
     const githubUserId = await this.githubService.getGithubUser(githubAccessToken);
