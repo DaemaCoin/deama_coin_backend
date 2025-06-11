@@ -12,8 +12,6 @@ export const GetCommitData = createParamDecorator<{
     commitIds: string[];
   } => {
     const request = ctx.switchToHttp().getRequest();
-    console.log('\n---COMMITS - BODY ---\n');
-    console.log(request.body);
 
     return {
       fullName: request.body.repository.full_name,
