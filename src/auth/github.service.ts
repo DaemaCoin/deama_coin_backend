@@ -7,8 +7,8 @@ import { InvalidAccessException } from 'src/exception/custom-exception/invalid-a
 export class GithubService {
   constructor(private readonly configService: ConfigService) {}
 
-  async getUserRepo(githubToken: string): Promise<string[]> {
-    const res = await fetch('https://api.github.com/user/repos', {
+  async getUserRepo(githubToken: string, page: number): Promise<string[]> {
+    const res = await fetch(`https://api.github.com/user/repos?per_page=100&page=${page}`, {
       method: 'get',
       headers: {
         'Content-Type': 'application/json',

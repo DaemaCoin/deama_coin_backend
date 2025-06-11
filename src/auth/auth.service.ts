@@ -49,7 +49,10 @@ export class AuthService {
     const githubAccessToken = await this.githubService.githubLogin(code);
     const githubUserId = await this.githubService.getGithubUser(githubAccessToken);
 
-    const repos = await this.githubService.getUserRepo(githubAccessToken);
+    const getReposPromises = [1, 2, 3, 4].map((page) => this.githubService.getUserRepo(githubAccessToken, page));
+    const getReposResults = await Promise.all(getReposPromises);
+    const repos = getReposResults.flat();
+
     await Promise.all(
       repos.map((repoName) =>
         this.githubService.createGitHook(githubAccessToken, repoName),
