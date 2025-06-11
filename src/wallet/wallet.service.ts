@@ -45,7 +45,9 @@ export class WalletService {
       }),
     });
 
+    const encodedId = Buffer.from(owner).toString('base64');
     await this.coinRepository.save({
+      id: encodedId,
       message: '초기 코인 지급',
       repoName: 'Start',
       user: { id: owner },
