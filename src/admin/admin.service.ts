@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { StoreApplicationEntity, StoreApplicationStatus } from '../store/entity/store-application.entity';
 import { StoreEntity } from '../store/entity/store.entity';
 import { UpdateStoreApplicationStatusDto } from '../store/dto/store-application.dto';
+import { WalletService } from 'src/wallet/wallet.service';
 
 @Injectable()
 export class AdminService {
@@ -12,6 +13,7 @@ export class AdminService {
     private storeApplicationRepository: Repository<StoreApplicationEntity>,
     @InjectRepository(StoreEntity)
     private storeRepository: Repository<StoreEntity>,
+    private readonly walletService: WalletService,
   ) {}
 
   // 입점 신청 목록 조회
@@ -46,6 +48,8 @@ export class AdminService {
     if (dto.status === 'APPROVED') {
       await this.createStoreAccount(application);
     }
+
+    this.walletService.createWallet(application.storeName, 0);
 
     return updatedApplication;
   }

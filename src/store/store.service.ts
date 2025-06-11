@@ -127,8 +127,8 @@ export class StoreService {
     }
 
     // 4. 코인 차감 (transfer 기능 활용)
-    await this.walletService.transfer(dto.userId, {
-      to: 'STORE_SYSTEM', // 시스템 계정
+    await this.walletService.transferAnoymous(dto.userId, {
+      to: store.storeId, // 시스템 계정
       amount: totalAmount.toString(),
     });
 

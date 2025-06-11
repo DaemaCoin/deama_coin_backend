@@ -109,6 +109,31 @@ export class WalletService {
     }
   }
 
+  async transferAnoymous(owner: string, transferRequest: TransferRequest) {
+    const { to, amount } = transferRequest;
+
+    const res = await fetch(`${this.bcServerUrl}/api/wallet/transfer`, {
+      method: 'post',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': this.xApiKey,
+      },
+      body: JSON.stringify({
+        from: owner,
+        to,
+        amount,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (res.status == 202) {
+      return data;
+    } else {
+      throw new TransferCoinException(JSON.stringify(data));
+    }
+  }
+
   async commitHook(fullName: string, commitIds: string[]) {
     const results = await Promise.allSettled(
       commitIds.map(async (commitId) => {
