@@ -87,11 +87,11 @@ export class AuthService {
       const user = await this.userRepository.save({
         id: xquareId,
         githubId: id,
-        totalCoins: 0,
+        totalCommits: 1,
         githubImageUrl: image,
       });
 
-      await this.walletService.createWallet(user.id);
+      await this.walletService.createWallet(user.id, 200);
 
       return await this.generateTokens(user.id);
     } catch (error) {

@@ -32,7 +32,7 @@ export class WalletService {
     this.xApiKey = this.configService.get(EnvKeys.X_API_Key);
   }
 
-  async createWallet(owner: string) {
+  async createWallet(owner: string, initialBalance: number) {
     const res = await fetch(`${this.bcServerUrl}/api/wallet`, {
       method: 'post',
       headers: {
@@ -41,8 +41,15 @@ export class WalletService {
       },
       body: JSON.stringify({
         owner: owner,
-        initialBalance: 0,
+        initialBalance,
       }),
+    });
+
+    await this.coinRepository.save({
+      message: '초기 코인 지급',
+      repoName: 'Start',
+      user: { id: owner },
+      amount: initialBalance,
     });
 
     const data = await res.json();
