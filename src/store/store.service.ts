@@ -88,13 +88,19 @@ export class StoreService {
   }
 
   // 주문 생성
-  async createOrder(storeId: number, dto: CreateOrderDto): Promise<OrderEntity> {
+  async createOrder(id: string, dto: CreateOrderDto): Promise<OrderEntity> {
     // 1. 지갑 잔액 확인
     const walletInfo = await this.walletService.getWallet(dto.userId);
     
     // 2. 주문 상품들의 총 금액 계산
     let totalAmount = 0;
     const orderItemsData = [];
+
+    const store = await this.storeRepository.findOne({
+      where: { storeId: id }
+    })
+
+    const storeId: number = store.id;
 
     for (const item of dto.orderItems) {
       const product = await this.productRepository.findOne({

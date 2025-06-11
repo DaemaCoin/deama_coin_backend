@@ -81,11 +81,7 @@ export class StoreController {
   @Public()
   @Post(':storeId/orders')
   async createOrder(@Param('storeId') storeId: string, @Body() dto: CreateOrderDto) {
-    const parsedStoreId = parseInt(storeId);
-    if (isNaN(parsedStoreId)) {
-      throw new BadRequestException('유효하지 않은 상점 ID입니다.');
-    }
-    return this.storeService.createOrder(parsedStoreId, dto);
+    return this.storeService.createOrder(storeId, dto);
   }
 
   // 내 주문 목록 조회 (상점 JWT 필요)
