@@ -1,4 +1,4 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { WalletController } from './wallet.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -6,14 +6,11 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { GenerativeModel, GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
 import { EnvKeys } from 'src/common/env.keys';
-import { AuthModule } from 'src/auth/auth.module';
 import { CoinEntity } from './entity/commit.entity';
+import { GithubModule } from 'src/github/github.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([UserEntity, CoinEntity]),
-    forwardRef(() => AuthModule),
-  ],
+  imports: [TypeOrmModule.forFeature([UserEntity, CoinEntity]), GithubModule],
   controllers: [WalletController],
   providers: [
     WalletService,

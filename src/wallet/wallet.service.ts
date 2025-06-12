@@ -10,9 +10,9 @@ import { Repository } from 'typeorm';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
 import { TransferCoinException } from 'src/exception/custom-exception/transfer-coin.exception';
 import { GenerativeModel } from '@google/generative-ai';
-import { GithubService } from 'src/auth/github.service';
 import { CoinEntity } from './entity/commit.entity';
 import { GetRewardScoreException } from 'src/exception/custom-exception/get-reward-score.exception';
+import { GithubService } from 'src/github/github.service';
 
 @Injectable()
 export class WalletService {

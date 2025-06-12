@@ -8,13 +8,15 @@ import { StoreModule } from './store/store.module';
 import { AdminModule } from './admin/admin.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtGuard } from './common/guard/jwt.guard';
+import { GithubModule } from './github/github.module';
 
 @Module({
   imports: [
-    configModule, 
-    typeOrmModule, 
-    jwtModule, 
-    AuthModule, 
+    configModule,
+    typeOrmModule,
+    jwtModule,
+    AuthModule,
+    GithubModule,
     WalletModule,
     StoreModule,
     AdminModule,

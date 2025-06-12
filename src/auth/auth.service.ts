@@ -7,11 +7,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { RegisterRequest } from './dto/request/register.request';
 import { JwtService } from '@nestjs/jwt';
 import { RegisterException } from 'src/exception/custom-exception/register.exception';
-import { GithubService } from './github.service';
 import { XquareService } from './xquare.service';
 import { TokensResponse } from './dto/response/token.response';
 import { EnvKeys } from 'src/common/env.keys';
 import { WalletService } from 'src/wallet/wallet.service';
+import { GithubService } from 'src/github/github.service';
 
 @Injectable()
 export class AuthService {
