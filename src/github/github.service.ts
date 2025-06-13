@@ -3,14 +3,18 @@ import { ConfigService } from '@nestjs/config';
 import { EnvKeys } from 'src/common/env.keys';
 import { GithubHookI } from 'src/common/interface/git-hook.interface';
 import { GithubRepoI } from 'src/common/interface/git-repo.interface';
-import { FetchMethod, githubFetch } from 'src/common/util/fetch.util';
+import { FetchMethod } from 'src/common/util/fetch-method';
+import { GithubClient } from './github-client';
 
 @Injectable()
 export class GithubService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly githubClient: GithubClient,
+  ) {}
 
   async getUserRepo(githubToken: string, page: number): Promise<any[]> {
-    const res = await githubFetch<GithubRepoI[]>(
+    const res = await this.githubClient.fetch<GithubRepoI[]>(
       `https://api.github.com/user/repos?per_page=100&page=${page}&type=public`,
       [200],
       {
@@ -26,7 +30,7 @@ export class GithubService {
   }
 
   async createGitHook(githubToken: string, fullName: string): Promise<void> {
-    await githubFetch(
+    await this.githubClient.fetch(
       `https://api.github.com/repos/${fullName}/hooks`,
       [201, 422],
       {
@@ -50,22 +54,21 @@ export class GithubService {
   }
 
   async githubLogin(code: string): Promise<string> {
-    const res = await githubFetch<{ access_token: string; error?: string }>(
-      'https://github.com/login/oauth/access_token',
-      [200],
-      {
-        method: FetchMethod.POST,
-        body: JSON.stringify({
-          client_id: this.configService.get(EnvKeys.GITHUB_CLIENT_ID),
-          client_secret: this.configService.get(EnvKeys.GITHUB_SECRET_ID),
-          code,
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
+    const res = await this.githubClient.fetch<{
+      access_token: string;
+      error?: string;
+    }>('https://github.com/login/oauth/access_token', [200], {
+      method: FetchMethod.POST,
+      body: JSON.stringify({
+        client_id: this.configService.get(EnvKeys.GITHUB_CLIENT_ID),
+        client_secret: this.configService.get(EnvKeys.GITHUB_SECRET_ID),
+        code,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
       },
-    );
+    });
 
     return res.access_token;
   }
@@ -73,7 +76,7 @@ export class GithubService {
   async getGithubUser(
     githubToken: string,
   ): Promise<{ id: string; image: string }> {
-    const res = await githubFetch<{
+    const res = await this.githubClient.fetch<{
       login: string;
       avatar_url: string;
       error?: string;
@@ -89,7 +92,7 @@ export class GithubService {
   }
 
   async getCommitData(fullName: string, commitId: string): Promise<any> {
-    return await githubFetch<any>(
+    return await this.githubClient.fetch<any>(
       `https://api.github.com/repos/${fullName}/commits/${commitId}`,
       [200],
       {
@@ -105,7 +108,7 @@ export class GithubService {
     githubToken: string,
     fullName: string,
   ): Promise<GithubHookI[]> {
-    return await githubFetch<GithubHookI[]>(
+    return await this.githubClient.fetch<GithubHookI[]>(
       `https://api.github.com/repos/${fullName}/hooks`,
       [200, 404],
       {
@@ -119,7 +122,7 @@ export class GithubService {
   }
 
   async deleteGitHook(githubToken: string, hookUrl: string): Promise<void> {
-    await githubFetch(hookUrl, [204], {
+    await this.githubClient.fetch(hookUrl, [204], {
       method: FetchMethod.DELETE,
       headers: {
         'Content-Type': 'application/json',
