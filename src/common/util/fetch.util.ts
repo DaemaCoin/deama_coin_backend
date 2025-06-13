@@ -1,4 +1,4 @@
-import { GithubException } from "src/exception/custom-exception/github.exception";
+import { GithubException } from 'src/exception/custom-exception/github.exception';
 
 export enum FetchMethod {
   GET = 'get',
