@@ -233,8 +233,9 @@ export class WalletService {
     return {
       history: await this.coinRepository.find({
         where: { user: { id: userId } },
+        order: { createdAt: 'DESC' },
         skip: page * take,
-        take
+        take,
       }),
     };
   }
