@@ -10,6 +10,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtGuard } from './common/guard/jwt.guard';
 import { GithubModule } from './github/github.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
+import { CoinModule } from './coin/coin.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module';
     AuthModule,
     GithubModule,
     WalletModule,
+    CoinModule,
     StoreModule,
     AdminModule,
     LeaderboardModule,
