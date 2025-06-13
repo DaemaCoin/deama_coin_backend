@@ -34,16 +34,13 @@ export class LeaderboardService {
       .limit(limit)
       .getRawMany();
 
-    // 순위 계산을 위해 전체 결과도 필요 (성능 최적화 가능)
-    const allResults = await queryBuilder.getRawMany();
-
-    // 결과를 DTO로 변환하면서 순위 계산
-    const items: LeaderboardItemDto[] = rawResults.map((result) => {
-      // 전체 결과에서 현재 사용자가 몇 번째인지 찾기
-      const globalIndex = allResults.findIndex(item => item.userId === result.userId);
+    // 결과를 DTO로 변환하면서 전체 순위 계산
+    const items: LeaderboardItemDto[] = rawResults.map((result, index) => {
+      // 전체 순위 = (페이지 번호 * 페이지 크기) + 페이지 내 인덱스 + 1
+      const globalRank = (page * limit) + index + 1;
       
       return {
-        rank: globalIndex + 1,
+        rank: globalRank,
         profileImageUrl: result.profileImageUrl,
         totalCoins: parseInt(result.totalCoins) || 0,
         githubId: result.githubId,
