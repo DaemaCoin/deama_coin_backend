@@ -9,6 +9,7 @@ import { AdminModule } from './admin/admin.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtGuard } from './common/guard/jwt.guard';
 import { GithubModule } from './github/github.module';
+import { LeaderboardModule } from './leaderboard/leaderboard.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { GithubModule } from './github/github.module';
     WalletModule,
     StoreModule,
     AdminModule,
+    LeaderboardModule,
   ],
   providers: [
     {
