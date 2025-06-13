@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Post, Query, Req } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -11,6 +11,7 @@ import { LoginRequest } from './dto/request/login.request';
 import { IsPublic } from '../common/decorator/is-public';
 import { RegisterRequest } from './dto/request/register.request';
 import { GetUserId } from 'src/common/decorator/get-user-id';
+import { WithdrawRequest } from './dto/request/withdraw.request';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -50,5 +51,15 @@ export class AuthController {
   @Get('/user')
   async getUserProfile(@GetUserId() userId: string) {
     return await this.authService.getUserProfile(userId);
+  }
+
+  @ApiOperation({ summary: '유저 삭제, 등록된 webhook 삭제' })
+  @ApiResponse({ status: 204, description: '(유저 삭제, 등록된 webhook 삭제) 삭제' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  @ApiBearerAuth()
+  @Delete('/withdraw')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async withdraw(@GetUserId() userId: string, @Body() withdrawReq: WithdrawRequest) {
+    return await this.authService.withdraw(userId, withdrawReq);
   }
 }

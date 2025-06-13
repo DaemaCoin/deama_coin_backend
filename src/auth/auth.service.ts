@@ -13,12 +13,17 @@ import { EnvKeys } from 'src/common/env.keys';
 import { WalletService } from 'src/wallet/wallet.service';
 import { GithubService } from 'src/github/github.service';
 import { GithubRepoI } from 'src/common/interface/git-repo.interface';
+import { GithubHookI } from 'src/common/interface/git-hook.interface';
+import { WithdrawRequest } from './dto/request/withdraw.request';
+import { CoinEntity } from 'src/coin/entity/coin.entity';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(CoinEntity)
+    private readonly coinRepository: Repository<CoinEntity>,
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
     private readonly githubService: GithubService,
@@ -48,7 +53,8 @@ export class AuthService {
 
   async githubOAuth(code: string) {
     const githubAccessToken = await this.githubService.githubLogin(code);
-    const githubUserId = await this.githubService.getGithubUser(githubAccessToken);
+    const githubUserId =
+      await this.githubService.getGithubUser(githubAccessToken);
 
     const getReposPromises = [1, 2, 3, 4].map((page) =>
       this.githubService.getUserRepo(githubAccessToken, page),
@@ -100,7 +106,7 @@ export class AuthService {
 
       await this.walletService.createWallet(user.id, 200);
 
-      return await this.generateTokens(`user.id`);
+      return await this.generateTokens(user.id);
     } catch (error) {
       await this.userRepository.delete(xquareId);
       throw error;
@@ -109,5 +115,37 @@ export class AuthService {
 
   async getUserProfile(userId: string) {
     return await this.userRepository.findOne({ where: { id: userId } });
+  }
+
+  async withdraw(userId: string, withdrawReq: WithdrawRequest) {
+    const {code, hookUrl} = withdrawReq;
+    const githubAccessToken = await this.githubService.githubLogin(code);
+
+    const getReposPromises = [1, 2, 3, 4].map((page) =>
+      this.githubService.getUserRepo(githubAccessToken, page),
+    );
+    const getReposResults = await Promise.all(getReposPromises);
+    const allRepos = getReposResults.flat();
+
+    await Promise.all(
+      allRepos.map(async (repoInfo: GithubRepoI) => {
+        const hookInfos: GithubHookI[] = await this.githubService.getRepoHooks(
+          githubAccessToken,
+          repoInfo.full_name,
+        );
+
+        if (Array.isArray(hookInfos) && hookInfos.length > 0) {
+          hookInfos.map(async (v) => {
+            if (v.config.url == hookUrl) {
+              console.log(v.url);
+              await this.githubService.deleteGitHook(githubAccessToken, v.url);
+            }
+          });
+        }
+      }),
+    );
+
+    await this.coinRepository.delete({ user: { id: userId } });
+    await this.userRepository.delete({ id: userId });
   }
 }

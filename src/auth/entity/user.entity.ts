@@ -19,6 +19,6 @@ export class UserEntity {
   @Column()
   totalCommits: number;
 
-  @OneToMany(() => CoinEntity, (coin) => coin.user, { onDelete: 'CASCADE' })
+  @OneToMany(() => CoinEntity, (coin) => coin.user)
   coins: CoinEntity[];
 }

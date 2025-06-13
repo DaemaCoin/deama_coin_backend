@@ -3,6 +3,7 @@ import { GithubException } from 'src/exception/custom-exception/github.exception
 export enum FetchMethod {
   GET = 'get',
   POST = 'post',
+  DELETE = 'delete'
 }
 
 export async function githubFetch<T>(
@@ -22,7 +23,7 @@ export async function githubFetch<T>(
       errorMessage = errorData?.message || errorMessage;
     }
 
-    throw new GithubException(errorMessage, res.status);
+    throw new GithubException(errorMessage, res.status, url);
   }
 
   return res.json() as Promise<T>;

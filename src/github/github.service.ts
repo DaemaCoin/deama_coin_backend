@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EnvKeys } from 'src/common/env.keys';
+import { GithubHookI } from 'src/common/interface/git-hook.interface';
 import { GithubRepoI } from 'src/common/interface/git-repo.interface';
 import { FetchMethod, githubFetch } from 'src/common/util/fetch.util';
 
@@ -98,5 +99,32 @@ export class GithubService {
         },
       },
     );
+  }
+
+  async getRepoHooks(
+    githubToken: string,
+    fullName: string,
+  ): Promise<GithubHookI[]> {
+    return await githubFetch<GithubHookI[]>(
+      `https://api.github.com/repos/${fullName}/hooks`,
+      [200, 404],
+      {
+        method: FetchMethod.GET,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${githubToken}`,
+        },
+      },
+    );
+  }
+
+  async deleteGitHook(githubToken: string, hookUrl: string): Promise<void> {
+    await githubFetch(hookUrl, [204], {
+      method: FetchMethod.DELETE,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${githubToken}`,
+      },
+    });
   }
 }
