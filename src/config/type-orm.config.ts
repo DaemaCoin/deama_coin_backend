@@ -7,7 +7,7 @@ import { ProductEntity } from 'src/store/entity/product.entity';
 import { OrderEntity } from 'src/store/entity/order.entity';
 import { OrderItemEntity } from 'src/store/entity/order-item.entity';
 import { EnvKeys } from 'src/common/env.keys';
-import { CoinEntity } from 'src/wallet/entity/commit.entity';
+import { CoinEntity } from 'src/coin/entity/coin.entity';
 
 export const typeOrmModule = TypeOrmModule.forRootAsync({
   inject: [ConfigService],

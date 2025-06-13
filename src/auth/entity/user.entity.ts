@@ -1,4 +1,4 @@
-import { CoinEntity } from 'src/wallet/entity/commit.entity';
+import { CoinEntity } from 'src/coin/entity/coin.entity';
 import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 
 @Entity('user')
