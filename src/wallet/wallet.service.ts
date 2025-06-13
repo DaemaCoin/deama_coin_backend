@@ -9,10 +9,9 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { Repository } from 'typeorm';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
 import { TransferCoinException } from 'src/exception/custom-exception/transfer-coin.exception';
-import { GenerativeModel } from '@google/generative-ai';
 import { CoinEntity } from './entity/commit.entity';
-import { GetRewardScoreException } from 'src/exception/custom-exception/get-reward-score.exception';
 import { GithubService } from 'src/github/github.service';
+import { GeminiService } from 'src/gemini/gemini.service';
 
 @Injectable()
 export class WalletService {
@@ -24,9 +23,9 @@ export class WalletService {
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(CoinEntity)
     private readonly coinRepository: Repository<CoinEntity>,
-    private readonly geminiModel: GenerativeModel,
     private readonly configService: ConfigService,
     private readonly githubSerivice: GithubService,
+    private readonly geminiService: GeminiService,
   ) {
     this.bcServerUrl = this.configService.get(EnvKeys.DEAMA_COIN_BC_SERVER_URL);
     this.xApiKey = this.configService.get(EnvKeys.X_API_Key);
@@ -148,7 +147,7 @@ export class WalletService {
           const commitPatchDatas: string[] = commitData.files.map(
             (v) => v.patch,
           );
-          const commitScore = await this.getRewardScore(
+          const commitScore = await this.geminiService.getCommitScore(
             commitPatchDatas.join(', '),
           );
 
@@ -191,18 +190,7 @@ export class WalletService {
     }
   }
 
-  async getRewardScore(commitContent: string): Promise<number> {
-    try {
-      const result = await this.geminiModel.generateContent(
-        `커밋 내용 : ${commitContent}`,
-      );
-      const response = result.response;
-      return Number(response.text().trim());
-    } catch (error) {
-      console.error('Gemini reward 기능 호출 중 오류 발생:', error);
-      throw new GetRewardScoreException();
-    }
-  }
+  
 
   async postReward(owner: string, commitHash: string, commitScore: number) {
     const res = await fetch(`${this.bcServerUrl}/api/wallet/reward`, {
