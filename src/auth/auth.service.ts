@@ -12,6 +12,7 @@ import { TokensResponse } from './dto/response/token.response';
 import { EnvKeys } from 'src/common/env.keys';
 import { WalletService } from 'src/wallet/wallet.service';
 import { GithubService } from 'src/github/github.service';
+import { GithubRepoI } from 'src/common/interface/git-repo.interface';
 
 @Injectable()
 export class AuthService {
@@ -49,13 +50,16 @@ export class AuthService {
     const githubAccessToken = await this.githubService.githubLogin(code);
     const githubUserId = await this.githubService.getGithubUser(githubAccessToken);
 
-    const getReposPromises = [1, 2, 3, 4].map((page) => this.githubService.getUserRepo(githubAccessToken, page));
+    const getReposPromises = [1, 2, 3, 4].map((page) =>
+      this.githubService.getUserRepo(githubAccessToken, page),
+    );
     const getReposResults = await Promise.all(getReposPromises);
-    const repos = getReposResults.flat();
+    const allRepos = getReposResults.flat();
 
+    const writableRepos = allRepos.filter((repo) => repo.permissions.push);
     await Promise.all(
-      repos.map((repoName) =>
-        this.githubService.createGitHook(githubAccessToken, repoName),
+      writableRepos.map((repoInfo: GithubRepoI) =>
+        this.githubService.createGitHook(githubAccessToken, repoInfo.full_name),
       ),
     );
 
@@ -90,13 +94,13 @@ export class AuthService {
       const user = await this.userRepository.save({
         id: xquareId,
         githubId: id,
-        totalCommits: 1,
+        totalCommits: 0,
         githubImageUrl: image,
       });
 
       await this.walletService.createWallet(user.id, 200);
 
-      return await this.generateTokens(user.id);
+      return await this.generateTokens(`user.id`);
     } catch (error) {
       await this.userRepository.delete(xquareId);
       throw error;
@@ -107,15 +111,3 @@ export class AuthService {
     return await this.userRepository.findOne({ where: { id: userId } });
   }
 }
-
-/*
-  회원가입 로직
-
-  1. Xqure Login - 여기서 XqureId 받기
-  2. Github Login - 여기서 GithubId 받기
-  3. Register - 이 2개 합쳐서 Regiser하기
-
-  로그인 로직
-  1. Xquare Login + User 조회, 둘다 존재하면 토큰
-  2. 아니면 xqureId 출력
-*/

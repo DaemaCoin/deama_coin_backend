@@ -17,8 +17,8 @@ export class UserEntity {
   githubImageUrl: string;
 
   @Column()
-  totalCommits: number
+  totalCommits: number;
 
-  @OneToMany(() => CoinEntity, (coin) => coin.user)
-  coins: CoinEntity[]
+  @OneToMany(() => CoinEntity, (coin) => coin.user, { onDelete: 'CASCADE' })
+  coins: CoinEntity[];
 }
