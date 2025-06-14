@@ -5,6 +5,7 @@ import { StoreApplicationEntity, StoreApplicationStatus } from '../store/entity/
 import { StoreEntity } from '../store/entity/store.entity';
 import { UpdateStoreApplicationStatusDto } from '../store/dto/store-application.dto';
 import { WalletService } from 'src/wallet/wallet.service';
+import { AdminException } from 'src/exception/custom-exception/admin.exception';
 
 @Injectable()
 export class AdminService {
@@ -33,7 +34,7 @@ export class AdminService {
     });
 
     if (!application) {
-      throw new NotFoundException('신청을 찾을 수 없습니다.');
+      throw new AdminException('신청을 찾을 수 없습니다.', 404);
     }
 
     // 상태 업데이트
@@ -85,7 +86,7 @@ export class AdminService {
     });
 
     if (!store) {
-      throw new NotFoundException('상점을 찾을 수 없습니다.');
+      throw new AdminException('상점을 찾을 수 없습니다.', 404);
     }
 
     store.isActive = !store.isActive;
