@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -38,7 +38,7 @@ export class StoreService {
     });
 
     if (existingApplication) {
-      throw new StoreException('이미 대기 중인 신청이 있습니다.', 400);
+      throw new StoreException('이미 대기 중인 신청이 있습니다.', HttpStatus.BAD_REQUEST);
     }
 
     const application = this.storeApplicationRepository.create(dto);
@@ -54,7 +54,7 @@ export class StoreService {
     });
 
     if (!store) {
-      throw new StoreException('잘못된 로그인 정보입니다.', 400);
+      throw new StoreException('잘못된 로그인 정보입니다.', HttpStatus.BAD_REQUEST);
     }
 
     const payload = { storeId: store.storeId, sub: store.id };
@@ -109,7 +109,7 @@ export class StoreService {
       });
 
       if (!product) {
-        throw new StoreException(`상품을 찾을 수 없습니다: ${item.productId}`, 404);
+        throw new StoreException(`상품을 찾을 수 없습니다: ${item.productId}`, HttpStatus.NOT_FOUND);
       }
 
       const itemTotal = product.price * item.quantity;
@@ -124,7 +124,7 @@ export class StoreService {
 
     // 3. 잔액 확인
     if (walletInfo.balance < totalAmount) {
-      throw new StoreException('잔액이 부족합니다.', 400);
+      throw new StoreException('잔액이 부족합니다.', HttpStatus.BAD_REQUEST);
     }
 
     // 4. 코인 차감 (transfer 기능 활용)
@@ -174,7 +174,7 @@ export class StoreService {
     });
 
     if (!order) {
-      throw new StoreException('주문을 찾을 수 없습니다.', 404);
+      throw new StoreException('주문을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
     }
 
     order.status = 'COMPLETED' as any;

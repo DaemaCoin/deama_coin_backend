@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StoreApplicationEntity, StoreApplicationStatus } from '../store/entity/store-application.entity';
@@ -86,7 +86,7 @@ throw new AdminException('신청을 찾을 수 없습니다.', HttpStatus.NOT_FO
     });
 
     if (!store) {
-      throw new AdminException('상점을 찾을 수 없습니다.', 404);
+      throw new AdminException('상점을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
     }
 
     store.isActive = !store.isActive;
