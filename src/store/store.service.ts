@@ -12,6 +12,7 @@ import { StoreLoginDto } from './dto/store-login.dto';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import { CreateOrderDto } from './dto/order.dto';
 import { WalletService } from '../wallet/wallet.service';
+import { StoreException } from 'src/exception/custom-exception/store.exception';
 
 @Injectable()
 export class StoreService {
@@ -37,7 +38,7 @@ export class StoreService {
     });
 
     if (existingApplication) {
-      throw new BadRequestException('이미 대기 중인 신청이 있습니다.');
+      throw new StoreException('이미 대기 중인 신청이 있습니다.', 400);
     }
 
     const application = this.storeApplicationRepository.create(dto);
@@ -53,7 +54,7 @@ export class StoreService {
     });
 
     if (!store) {
-      throw new BadRequestException('잘못된 로그인 정보입니다.');
+      throw new StoreException('잘못된 로그인 정보입니다.', 400);
     }
 
     const payload = { storeId: store.storeId, sub: store.id };
@@ -108,7 +109,7 @@ export class StoreService {
       });
 
       if (!product) {
-        throw new NotFoundException(`상품을 찾을 수 없습니다: ${item.productId}`);
+        throw new StoreException(`상품을 찾을 수 없습니다: ${item.productId}`, 404);
       }
 
       const itemTotal = product.price * item.quantity;
@@ -123,7 +124,7 @@ export class StoreService {
 
     // 3. 잔액 확인
     if (walletInfo.balance < totalAmount) {
-      throw new BadRequestException('잔액이 부족합니다.');
+      throw new StoreException('잔액이 부족합니다.', 400);
     }
 
     // 4. 코인 차감 (transfer 기능 활용)
@@ -173,7 +174,7 @@ export class StoreService {
     });
 
     if (!order) {
-      throw new NotFoundException('주문을 찾을 수 없습니다.');
+      throw new StoreException('주문을 찾을 수 없습니다.', 404);
     }
 
     order.status = 'COMPLETED' as any;
