@@ -34,7 +34,7 @@ export class AdminService {
     });
 
     if (!application) {
-      throw new AdminException('신청을 찾을 수 없습니다.', 404);
+throw new AdminException('신청을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
     }
 
     // 상태 업데이트
