@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StoreApplicationEntity, StoreApplicationStatus } from '../store/entity/store-application.entity';
 import { StoreEntity } from '../store/entity/store.entity';
 import { UpdateStoreApplicationStatusDto } from '../store/dto/store-application.dto';
 import { WalletService } from 'src/wallet/wallet.service';
+import { AdminException } from 'src/exception/custom-exception/admin.exception';
 
 @Injectable()
 export class AdminService {
@@ -33,7 +34,7 @@ export class AdminService {
     });
 
     if (!application) {
-      throw new NotFoundException('신청을 찾을 수 없습니다.');
+throw new AdminException('신청을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
     }
 
     // 상태 업데이트
@@ -85,7 +86,7 @@ export class AdminService {
     });
 
     if (!store) {
-      throw new NotFoundException('상점을 찾을 수 없습니다.');
+      throw new AdminException('상점을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
     }
 
     store.isActive = !store.isActive;
