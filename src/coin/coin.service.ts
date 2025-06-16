@@ -44,12 +44,35 @@ export class CoinService {
           });
           if (!user) throw new UserNotFoundException();
 
+          // 일일 코인 획득량 체크 및 초기화
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          if (!user.lastCoinDate || user.lastCoinDate.getTime() !== today.getTime()) {
+            // 새로운 날짜인 경우 일일 코인 획득량 초기화
+            await this.userRepository.update(user.id, {
+              dailyCoinAmount: 0,
+              lastCoinDate: today
+            });
+            user.dailyCoinAmount = 0;
+          }
+
+          // 일일 제한 체크
+          if (user.dailyCoinAmount >= 20) {
+            console.log(`User ${user.id} has reached daily coin limit`);
+            return;
+          }
+
+          // 남은 코인 계산
+          const remainingCoins = 20 - user.dailyCoinAmount;
+          const actualCoinAmount = Math.min(commitScore, remainingCoins);
+
           // 표현된 점수를 블록체인 서버에 보내기
-          await this.walletService.postReward(user.id, commitData.sha, commitScore);
+          await this.walletService.postReward(user.id, commitData.sha, actualCoinAmount);
 
           await this.coinRepository.save({
             id: commitData.sha,
-            amount: commitScore,
+            amount: actualCoinAmount,
             message: commitData.commit.message,
             repoName: fullName,
             user: { id: user.id },
@@ -57,6 +80,7 @@ export class CoinService {
 
           await this.userRepository.update(user.id, {
             totalCommits: user.totalCommits + 1,
+            dailyCoinAmount: user.dailyCoinAmount + actualCoinAmount
           });
         } catch (error) {
           // 에러 발생 시 로그 수집
