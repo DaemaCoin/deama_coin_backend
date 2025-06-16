@@ -7,10 +7,13 @@ import { Repository } from 'typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
 import { WalletService } from 'src/wallet/wallet.service';
-import { QueryRunner } from 'typeorm';
+import { RedisUtilService } from 'src/util-module/redis/redis-util.service';
 
 @Injectable()
 export class CoinService {
+  private readonly CACHE_TTL = 3600; // 1시간 (초 단위)
+  private readonly CACHE_PREFIX = 'coin_history:';
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
@@ -19,6 +22,7 @@ export class CoinService {
     private readonly githubService: GithubService,
     private readonly geminiService: GeminiUtilService,
     private readonly walletService: WalletService,
+    private readonly redisService: RedisUtilService,
   ) {}
 
   async commitHook(fullName: string, commitIds: string[]) {
@@ -103,6 +107,13 @@ export class CoinService {
             });
 
             await queryRunner.commitTransaction();
+
+            // 새로운 코인이 추가되었으므로 해당 사용자의 모든 페이지 캐시 삭제
+            const cachePattern = `${this.CACHE_PREFIX}${user.id}:*`;
+            const cacheDeleteSuccess = await this.redisService.deleteByPattern(cachePattern);
+            if (!cacheDeleteSuccess) {
+              console.warn(`Failed to delete cache for user ${user.id} after new coin addition`);
+            }
           } catch (error) {
             await queryRunner.rollbackTransaction();
             console.error(`Error processing commit ${commitId} for user ${commitData.author.login}:`, error);
@@ -131,14 +142,48 @@ export class CoinService {
 
   async getCoinHistory(userId: string, page: number = 0) {
     const take = 20;
+    const cacheKey = `${this.CACHE_PREFIX}${userId}:${page}`;
 
-    return {
-      history: await this.coinRepository.find({
+    try {
+      // 캐시에서 데이터 조회 시도
+      const cachedData = await this.redisService.get(cacheKey);
+      if (cachedData) {
+        try {
+          return JSON.parse(cachedData);
+        } catch (parseError) {
+          console.error(`Failed to parse cached data for key ${cacheKey}: ${parseError.message}`);
+          // 파싱 실패 시 캐시 삭제
+          await this.redisService.delete(cacheKey);
+        }
+      }
+
+      // 캐시에 없거나 파싱 실패 시 DB에서 조회
+      const history = await this.coinRepository.find({
         where: { user: { id: userId } },
         order: { createdAt: 'DESC' },
         skip: page * take,
         take,
-      }),
-    };
+      });
+
+      const result = { history };
+
+      // 결과를 캐시에 저장 (1시간 TTL)
+      const cacheSuccess = await this.redisService.set(cacheKey, JSON.stringify(result), this.CACHE_TTL);
+      if (!cacheSuccess) {
+        console.warn(`Failed to cache coin history for user ${userId} page ${page}`);
+      }
+
+      return result;
+    } catch (error) {
+      console.error(`Error in getCoinHistory for user ${userId} page ${page}: ${error.message}`);
+      // Redis 오류가 발생해도 DB에서 데이터는 반환
+      const history = await this.coinRepository.find({
+        where: { user: { id: userId } },
+        order: { createdAt: 'DESC' },
+        skip: page * take,
+        take,
+      });
+      return { history };
+    }
   }
 }
