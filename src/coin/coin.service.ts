@@ -42,9 +42,7 @@ export class CoinService {
           );
 
           // 그 하나의 내용을 reward 점수로써 표현
-          const commitPatchDatas: string[] = commitData.files.map(
-            (v) => v.patch,
-          );
+          const commitPatchDatas: string[] = commitData.files.map( (v) => v.patch );
           const commitScore = await this.geminiService.getCommitScore(
             commitPatchDatas.join(', '),
           );
@@ -109,20 +107,16 @@ export class CoinService {
             await queryRunner.commitTransaction();
 
             // 새로운 코인이 추가되었으므로 해당 사용자의 모든 페이지 캐시 삭제
-            const cachePattern = `${this.CACHE_PREFIX}${user.id}:*`;
-            const cacheDeleteSuccess = await this.redisService.deleteByPattern(cachePattern);
-            if (!cacheDeleteSuccess) {
-              console.warn(`Failed to delete cache for user ${user.id} after new coin addition`);
-            }
+            await this._clearUserCache(user.id, '새로운 코인 추가 후');
           } catch (error) {
             await queryRunner.rollbackTransaction();
-            console.error(`Error processing commit ${commitId} for user ${commitData.author.login}:`, error);
+            console.error(`커밋 처리 중 오류 발생 (커밋 ID: ${commitId}, 사용자: ${commitData.author.login}): ${error.message}`);
             throw error;
           } finally {
             await queryRunner.release();
           }
         } catch (error) {
-          console.error(`Error processing commitId ${commitId}:`, error);
+          console.error(`커밋 ID ${commitId} 처리 중 오류 발생: ${error.message}`);
           throw error;
         }
       }),
@@ -135,18 +129,9 @@ export class CoinService {
 
     if (failedCommits.length > 0) {
       console.warn(
-        `Some commits failed to process: ${failedCommits.join(', ')}`,
+        `일부 커밋 처리 실패: ${failedCommits.join(', ')}`,
       );
     }
-  }
-
-  private async _fetchCoinHistoryFromDB(userId: string, page: number, take: number): Promise<CoinEntity[]> {
-    return this.coinRepository.find({
-      where: { user: { id: userId } },
-      order: { createdAt: 'DESC' },
-      skip: page * take,
-      take,
-    });
   }
 
   async getCoinHistory(userId: string, page: number = 0) {
@@ -160,9 +145,7 @@ export class CoinService {
         try {
           return JSON.parse(cachedData);
         } catch (parseError) {
-          console.error(`Failed to parse cached data for key ${cacheKey}: ${parseError.message}`);
-          // 파싱 실패 시 캐시 삭제
-          await this.redisService.delete(cacheKey);
+          await this._clearCache(cacheKey, '잘못된 캐시 데이터');
         }
       }
 
@@ -173,15 +156,43 @@ export class CoinService {
       // 결과를 캐시에 저장 (1시간 TTL)
       const cacheSuccess = await this.redisService.set(cacheKey, JSON.stringify(result), this.CACHE_TTL);
       if (!cacheSuccess) {
-        console.warn(`Failed to cache coin history for user ${userId} page ${page}`);
+        await this._clearCache(cacheKey, '캐시 저장 실패');
       }
 
       return result;
     } catch (error) {
-      console.error(`Error in getCoinHistory for user ${userId} page ${page}: ${error.message}`);
+      console.error(`코인 내역 조회 중 오류 발생 (사용자 ID: ${userId}, 페이지: ${page}): ${error.message}`);
       // Redis 오류가 발생해도 DB에서 데이터는 반환
       const history = await this._fetchCoinHistoryFromDB(userId, page, take);
+      await this._clearCache(cacheKey, '오류 발생');
       return { history };
+    }
+  }
+
+  private async _fetchCoinHistoryFromDB(userId: string, page: number, take: number): Promise<CoinEntity[]> {
+    return this.coinRepository.find({
+      where: { user: { id: userId } },
+      order: { createdAt: 'DESC' },
+      skip: page * take,
+      take,
+    });
+  }
+
+  private async _clearCache(key: string, errorMessage?: string): Promise<void> {
+    try {
+      await this.redisService.delete(key);
+    } catch (error) {
+      console.error(`캐시 삭제 실패 (키: ${key})${errorMessage ? ` - 사유: ${errorMessage}` : ''}: ${error.message}`);
+    }
+  }
+
+  private async _clearUserCache(userId: string, errorMessage?: string): Promise<boolean> {
+    const cachePattern = `${this.CACHE_PREFIX}${userId}:*`;
+    try {
+      return await this.redisService.deleteByPattern(cachePattern);
+    } catch (error) {
+      console.error(`사용자 캐시 삭제 실패 (사용자 ID: ${userId})${errorMessage ? ` - 사유: ${errorMessage}` : ''}: ${error.message}`);
+      return false;
     }
   }
 }
