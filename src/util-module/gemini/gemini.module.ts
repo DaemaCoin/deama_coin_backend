@@ -2,11 +2,11 @@ import { GenerativeModel, GoogleGenerativeAI } from '@google/generative-ai';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EnvKeys } from 'src/common/env.keys';
-import { GeminiService } from './gemini.service';
+import { GeminiUtilService } from './gemini.service';
 
 @Module({
   providers: [
-    GeminiService,
+    GeminiUtilService,
     {
       inject: [ConfigService],
       provide: GenerativeModel,
@@ -35,6 +35,6 @@ import { GeminiService } from './gemini.service';
       },
     },
   ],
-  exports: [GeminiService],
+  exports: [GeminiUtilService],
 })
-export class GeminiModule {}
+export class GeminiUtilModule {}

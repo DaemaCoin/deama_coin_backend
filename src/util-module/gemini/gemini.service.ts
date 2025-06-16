@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { GetCommitScoreException } from 'src/exception/custom-exception/get-reward-score.exception';
 
 @Injectable()
-export class GeminiService {
+export class GeminiUtilService {
   constructor(private readonly geminiModel: GenerativeModel) {}
 
   async getCommitScore(commitContent: string): Promise<number> {

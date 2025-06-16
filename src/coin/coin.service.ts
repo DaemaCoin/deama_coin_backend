@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { GeminiService } from 'src/gemini/gemini.service';
+import { GeminiUtilService } from 'src/util-module/gemini/gemini.service';
 import { GithubService } from 'src/github/github.service';
 import { CoinEntity } from './entity/coin.entity';
 import { Repository } from 'typeorm';
@@ -16,7 +16,7 @@ export class CoinService {
     @InjectRepository(CoinEntity)
     private readonly coinRepository: Repository<CoinEntity>,
     private readonly githubService: GithubService,
-    private readonly geminiService: GeminiService,
+    private readonly geminiService: GeminiUtilService,
     private readonly walletService: WalletService,
   ) {}
 
