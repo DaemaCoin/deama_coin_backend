@@ -7,7 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CoinEntity } from './entity/coin.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { WalletModule } from 'src/wallet/wallet.module';
-import { RedisUtilModule } from 'src/util-module/redis/reids-util.module';
+import { RedisUtilModule } from 'src/util-module/redis/redis-util.module';
 
 @Module({
   imports: [
