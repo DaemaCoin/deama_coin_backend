@@ -21,6 +21,8 @@ export class CoinService {
   ) {}
 
   async commitHook(fullName: string, commitIds: string[]) {
+    const MAX_COIN_AMOUNT = 20;
+  
     const results = await Promise.allSettled(
       commitIds.map(async (commitId) => {
         try {
@@ -45,26 +47,32 @@ export class CoinService {
           if (!user) throw new UserNotFoundException();
 
           // 일일 코인 획득량 체크 및 초기화
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
+          const currentDate = new Date();
+          const today = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate()));
           
           if (!user.lastCoinDate || user.lastCoinDate.getTime() !== today.getTime()) {
             // 새로운 날짜인 경우 일일 코인 획득량 초기화
-            await this.userRepository.update(user.id, {
-              dailyCoinAmount: 0,
-              lastCoinDate: today
-            });
-            user.dailyCoinAmount = 0;
+            try {
+              await this.userRepository.update(user.id, {
+                dailyCoinAmount: 0,
+                lastCoinDate: today
+              });
+              user.dailyCoinAmount = 0;
+              user.lastCoinDate = today;
+            } catch (resetError) {
+              console.error(`Failed to reset daily coin amount for user ${user.id}. Error: ${resetError}`);
+              throw resetError;
+            }
           }
 
           // 일일 제한 체크
-          if (user.dailyCoinAmount >= 20) {
+          if (user.dailyCoinAmount >= MAX_COIN_AMOUNT) {
             console.log(`User ${user.id} has reached daily coin limit`);
             return;
           }
 
           // 남은 코인 계산
-          const remainingCoins = 20 - user.dailyCoinAmount;
+          const remainingCoins = MAX_COIN_AMOUNT - user.dailyCoinAmount;
           const actualCoinAmount = Math.min(commitScore, remainingCoins);
 
           // 표현된 점수를 블록체인 서버에 보내기
@@ -79,8 +87,8 @@ export class CoinService {
           });
 
           await this.userRepository.update(user.id, {
-            totalCommits: user.totalCommits + 1,
-            dailyCoinAmount: user.dailyCoinAmount + actualCoinAmount
+            totalCommits: Increment(1),
+            dailyCoinAmount: Increment(actualCoinAmount)
           });
         } catch (error) {
           // 에러 발생 시 로그 수집
@@ -114,3 +122,7 @@ export class CoinService {
     };
   }
 }
+function Increment(arg0: number): number | (() => string) {
+  throw new Error('Function not implemented.');
+}
+
