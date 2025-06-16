@@ -8,6 +8,7 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
 import { WalletService } from 'src/wallet/wallet.service';
 import { RedisUtilService } from 'src/util-module/redis/redis-util.service';
+import { formattedDate, generateToday } from 'src/common/util/date-fn';
 
 @Injectable()
 export class CoinService {
@@ -29,9 +30,7 @@ export class CoinService {
     const MAX_COIN_AMOUNT = 20;
     
     // 날짜는 한 번만 계산
-    const currentDate = new Date();
-    const today = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate()));
-   
+    const today = generateToday();
     const results = await Promise.allSettled(
       commitIds.map(async (commitId) => {
         try {
@@ -58,30 +57,18 @@ export class CoinService {
               where: { githubId: commitData.author.login },
               lock: { mode: 'pessimistic_write' }
             });
-
             if (!user) {
-              await queryRunner.rollbackTransaction();
               throw new UserNotFoundException();
             }
 
-            const lastCoinDate = user.lastCoinDate ? 
-              new Date(Date.UTC(user.lastCoinDate.getUTCFullYear(), user.lastCoinDate.getUTCMonth(), user.lastCoinDate.getUTCDate())) : 
-              null;
-
-            if (!lastCoinDate || lastCoinDate.getTime() !== today.getTime()) {
+            const lastCoinDate = formattedDate(user.lastCoinDate, 'yyyy-MM-dd');
+            if (!lastCoinDate || lastCoinDate !== today) {
               // 새로운 날짜인 경우 일일 코인 획득량 초기화
               await queryRunner.manager.update(UserEntity, user.id, {
                 dailyCoinAmount: 0,
                 lastCoinDate: today
               });
               user.dailyCoinAmount = 0;
-            }
-
-            // 일일 제한 체크
-            if (user.dailyCoinAmount >= MAX_COIN_AMOUNT) {
-              console.log(`User ${user.id} has reached daily coin limit`);
-              await queryRunner.rollbackTransaction();
-              return;
             }
 
             // 남은 코인 계산
