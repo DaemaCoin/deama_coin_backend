@@ -87,8 +87,8 @@ export class CoinService {
           });
 
           await this.userRepository.update(user.id, {
-            totalCommits: Increment(1),
-            dailyCoinAmount: Increment(actualCoinAmount)
+            totalCommits: user.totalCommits + 1,
+            dailyCoinAmount: user.dailyCoinAmount + actualCoinAmount
           });
         } catch (error) {
           // 에러 발생 시 로그 수집
@@ -122,7 +122,3 @@ export class CoinService {
     };
   }
 }
-function Increment(arg0: number): number | (() => string) {
-  throw new Error('Function not implemented.');
-}
-
