@@ -140,6 +140,15 @@ export class CoinService {
     }
   }
 
+  private async _fetchCoinHistoryFromDB(userId: string, page: number, take: number): Promise<CoinEntity[]> {
+    return this.coinRepository.find({
+      where: { user: { id: userId } },
+      order: { createdAt: 'DESC' },
+      skip: page * take,
+      take,
+    });
+  }
+
   async getCoinHistory(userId: string, page: number = 0) {
     const take = 20;
     const cacheKey = `${this.CACHE_PREFIX}${userId}:${page}`;
@@ -158,13 +167,7 @@ export class CoinService {
       }
 
       // 캐시에 없거나 파싱 실패 시 DB에서 조회
-      const history = await this.coinRepository.find({
-        where: { user: { id: userId } },
-        order: { createdAt: 'DESC' },
-        skip: page * take,
-        take,
-      });
-
+      const history = await this._fetchCoinHistoryFromDB(userId, page, take);
       const result = { history };
 
       // 결과를 캐시에 저장 (1시간 TTL)
@@ -177,12 +180,7 @@ export class CoinService {
     } catch (error) {
       console.error(`Error in getCoinHistory for user ${userId} page ${page}: ${error.message}`);
       // Redis 오류가 발생해도 DB에서 데이터는 반환
-      const history = await this.coinRepository.find({
-        where: { user: { id: userId } },
-        order: { createdAt: 'DESC' },
-        skip: page * take,
-        take,
-      });
+      const history = await this._fetchCoinHistoryFromDB(userId, page, take);
       return { history };
     }
   }
