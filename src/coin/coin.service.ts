@@ -23,7 +23,11 @@ export class CoinService {
 
   async commitHook(fullName: string, commitIds: string[]) {
     const MAX_COIN_AMOUNT = 20;
-  
+    
+    // 날짜는 한 번만 계산
+    const currentDate = new Date();
+    const today = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate()));
+   
     const results = await Promise.allSettled(
       commitIds.map(async (commitId) => {
         try {
@@ -41,76 +45,67 @@ export class CoinService {
             commitPatchDatas.join(', '),
           );
 
-          // commitData.author.name으로 유저를 찾아서 해당 유저의 XQARE ID 찾기
-          const user = await this.userRepository.findOne({
-            where: { githubId: commitData.author.login },
-          });
-          if (!user) throw new UserNotFoundException();
-
-          // 일일 코인 획득량 체크 및 초기화
-          const currentDate = new Date();
-          const today = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate()));
-          
           // 트랜잭션 시작
           const queryRunner = this.userRepository.manager.connection.createQueryRunner();
           await queryRunner.connect();
           await queryRunner.startTransaction();
 
           try {
-            // 락을 걸고 유저 정보 다시 조회
-            const lockedUser = await queryRunner.manager.findOne(UserEntity, {
-              where: { id: user.id },
+            // 락을 걸고 유저 정보 조회 (한 번에 처리)
+            const user = await queryRunner.manager.findOne(UserEntity, {
+              where: { githubId: commitData.author.login },
               lock: { mode: 'pessimistic_write' }
             });
 
-            if (!lockedUser) {
+            if (!user) {
+              await queryRunner.rollbackTransaction();
               throw new UserNotFoundException();
             }
 
-            const lastCoinDate = lockedUser.lastCoinDate ? 
-              new Date(Date.UTC(lockedUser.lastCoinDate.getUTCFullYear(), lockedUser.lastCoinDate.getUTCMonth(), lockedUser.lastCoinDate.getUTCDate())) : 
+            const lastCoinDate = user.lastCoinDate ? 
+              new Date(Date.UTC(user.lastCoinDate.getUTCFullYear(), user.lastCoinDate.getUTCMonth(), user.lastCoinDate.getUTCDate())) : 
               null;
 
             if (!lastCoinDate || lastCoinDate.getTime() !== today.getTime()) {
               // 새로운 날짜인 경우 일일 코인 획득량 초기화
-              await queryRunner.manager.update(UserEntity, lockedUser.id, {
+              await queryRunner.manager.update(UserEntity, user.id, {
                 dailyCoinAmount: 0,
                 lastCoinDate: today
               });
-              lockedUser.dailyCoinAmount = 0;
+              user.dailyCoinAmount = 0;
             }
 
             // 일일 제한 체크
-            if (lockedUser.dailyCoinAmount >= MAX_COIN_AMOUNT) {
-              console.log(`User ${lockedUser.id} has reached daily coin limit`);
+            if (user.dailyCoinAmount >= MAX_COIN_AMOUNT) {
+              console.log(`User ${user.id} has reached daily coin limit`);
               await queryRunner.rollbackTransaction();
               return;
             }
 
             // 남은 코인 계산
-            const remainingCoins = MAX_COIN_AMOUNT - lockedUser.dailyCoinAmount;
+            const remainingCoins = MAX_COIN_AMOUNT - user.dailyCoinAmount;
             const actualCoinAmount = Math.min(commitScore, remainingCoins);
 
             // 표현된 점수를 블록체인 서버에 보내기
-            await this.walletService.postReward(lockedUser.id, commitData.sha, actualCoinAmount);
+            await this.walletService.postReward(user.id, commitData.sha, actualCoinAmount);
 
             await this.coinRepository.save({
               id: commitData.sha,
               amount: actualCoinAmount,
               message: commitData.commit.message,
               repoName: fullName,
-              user: { id: lockedUser.id },
+              user: { id: user.id },
             });
 
-            await queryRunner.manager.update(UserEntity, lockedUser.id, {
-              totalCommits: lockedUser.totalCommits + 1,
-              dailyCoinAmount: lockedUser.dailyCoinAmount + actualCoinAmount
+            await queryRunner.manager.update(UserEntity, user.id, {
+              totalCommits: user.totalCommits + 1,
+              dailyCoinAmount: user.dailyCoinAmount + actualCoinAmount
             });
 
             await queryRunner.commitTransaction();
           } catch (error) {
             await queryRunner.rollbackTransaction();
-            console.error(`Error processing commit ${commitId} for user ${user.id}:`, error);
+            console.error(`Error processing commit ${commitId} for user ${commitData.author.login}:`, error);
             throw error;
           } finally {
             await queryRunner.release();
