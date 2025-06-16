@@ -7,6 +7,7 @@ import { Repository } from 'typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
 import { WalletService } from 'src/wallet/wallet.service';
+import { QueryRunner } from 'typeorm';
 
 @Injectable()
 export class CoinService {
@@ -50,49 +51,73 @@ export class CoinService {
           const currentDate = new Date();
           const today = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate()));
           
-          if (!user.lastCoinDate || user.lastCoinDate.getTime() !== today.getTime()) {
-            // 새로운 날짜인 경우 일일 코인 획득량 초기화
-            try {
-              await this.userRepository.update(user.id, {
+          // 트랜잭션 시작
+          const queryRunner = this.userRepository.manager.connection.createQueryRunner();
+          await queryRunner.connect();
+          await queryRunner.startTransaction();
+
+          try {
+            // 락을 걸고 유저 정보 다시 조회
+            const lockedUser = await queryRunner.manager.findOne(UserEntity, {
+              where: { id: user.id },
+              lock: { mode: 'pessimistic_write' }
+            });
+
+            if (!lockedUser) {
+              throw new UserNotFoundException();
+            }
+
+            const lastCoinDate = lockedUser.lastCoinDate ? 
+              new Date(Date.UTC(lockedUser.lastCoinDate.getUTCFullYear(), lockedUser.lastCoinDate.getUTCMonth(), lockedUser.lastCoinDate.getUTCDate())) : 
+              null;
+
+            if (!lastCoinDate || lastCoinDate.getTime() !== today.getTime()) {
+              // 새로운 날짜인 경우 일일 코인 획득량 초기화
+              await queryRunner.manager.update(UserEntity, lockedUser.id, {
                 dailyCoinAmount: 0,
                 lastCoinDate: today
               });
-              user.dailyCoinAmount = 0;
-              user.lastCoinDate = today;
-            } catch (resetError) {
-              console.error(`Failed to reset daily coin amount for user ${user.id}. Error: ${resetError}`);
-              throw resetError;
+              lockedUser.dailyCoinAmount = 0;
             }
+
+            // 일일 제한 체크
+            if (lockedUser.dailyCoinAmount >= MAX_COIN_AMOUNT) {
+              console.log(`User ${lockedUser.id} has reached daily coin limit`);
+              await queryRunner.rollbackTransaction();
+              return;
+            }
+
+            // 남은 코인 계산
+            const remainingCoins = MAX_COIN_AMOUNT - lockedUser.dailyCoinAmount;
+            const actualCoinAmount = Math.min(commitScore, remainingCoins);
+
+            // 표현된 점수를 블록체인 서버에 보내기
+            await this.walletService.postReward(lockedUser.id, commitData.sha, actualCoinAmount);
+
+            await this.coinRepository.save({
+              id: commitData.sha,
+              amount: actualCoinAmount,
+              message: commitData.commit.message,
+              repoName: fullName,
+              user: { id: lockedUser.id },
+            });
+
+            await queryRunner.manager.update(UserEntity, lockedUser.id, {
+              totalCommits: lockedUser.totalCommits + 1,
+              dailyCoinAmount: lockedUser.dailyCoinAmount + actualCoinAmount
+            });
+
+            await queryRunner.commitTransaction();
+          } catch (error) {
+            await queryRunner.rollbackTransaction();
+            console.error(`Error processing commit ${commitId} for user ${user.id}:`, error);
+            throw error;
+          } finally {
+            await queryRunner.release();
           }
-
-          // 일일 제한 체크
-          if (user.dailyCoinAmount >= MAX_COIN_AMOUNT) {
-            console.log(`User ${user.id} has reached daily coin limit`);
-            return;
-          }
-
-          // 남은 코인 계산
-          const remainingCoins = MAX_COIN_AMOUNT - user.dailyCoinAmount;
-          const actualCoinAmount = Math.min(commitScore, remainingCoins);
-
-          // 표현된 점수를 블록체인 서버에 보내기
-          await this.walletService.postReward(user.id, commitData.sha, actualCoinAmount);
-
-          await this.coinRepository.save({
-            id: commitData.sha,
-            amount: actualCoinAmount,
-            message: commitData.commit.message,
-            repoName: fullName,
-            user: { id: user.id },
-          });
-
-          await this.userRepository.update(user.id, {
-            totalCommits: user.totalCommits + 1,
-            dailyCoinAmount: user.dailyCoinAmount + actualCoinAmount
-          });
         } catch (error) {
-          // 에러 발생 시 로그 수집
           console.error(`Error processing commitId ${commitId}:`, error);
+          throw error;
         }
       }),
     );
