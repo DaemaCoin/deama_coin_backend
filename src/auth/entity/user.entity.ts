@@ -16,8 +16,14 @@ export class UserEntity {
   @Column()
   githubImageUrl: string;
 
-  @Column()
+  @Column({ default: 0 })
   totalCommits: number;
+
+  @Column({ default: 0 })
+  dailyCoinAmount: number;
+
+  @Column({ type: 'date', nullable: true })
+  lastCoinDate: Date;
 
   @OneToMany(() => CoinEntity, (coin) => coin.user)
   coins: CoinEntity[];
