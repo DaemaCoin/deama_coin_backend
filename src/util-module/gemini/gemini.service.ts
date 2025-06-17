@@ -12,7 +12,12 @@ export class GeminiUtilService {
         `커밋 내용 : ${commitContent}`,
       );
       const response = result.response;
-      return Number(response.text().trim());
+      const score = Number(response.text().trim());
+      if (isNaN(score)) {
+        console.error('getCommitScore: 반환값이 숫자가 아님:', response.text());
+        throw new GetCommitScoreException();
+      }
+      return score;
     } catch (error) {
       console.error('Gemini reward 기능 호출 중 오류 발생:', error);
       throw new GetCommitScoreException();

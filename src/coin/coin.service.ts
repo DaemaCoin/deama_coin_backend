@@ -31,93 +31,98 @@ export class CoinService {
     
     // 날짜는 한 번만 계산
     const today = generateToday();
-    const results = await Promise.allSettled(
-      commitIds.map(async (commitId) => {
-        try {
-          // Push된 커밋 Id들 중 하나의 Diff를 구함
-          const commitData = await this.githubService.getCommitData(
-            fullName,
-            commitId,
-          );
+    
+    for (const commitId of commitIds) {
+      let user: UserEntity | null = null;
+      let commitData: any;
+      let actualCoinAmount = 0;
+      try {
+        // Push된 커밋 Id들 중 하나의 Diff를 구함
+        commitData = await this.githubService.getCommitData(
+          fullName,
+          commitId,
+        );
 
-          // 그 하나의 내용을 reward 점수로써 표현
-          const commitPatchDatas: string[] = commitData.files.map( (v) => v.patch );
-          const commitScore = await this.geminiService.getCommitScore(
-            commitPatchDatas.join(', '),
-          );
+        // 그 하나의 내용을 reward 점수로써 표현
+        const commitPatchDatas: string[] = commitData.files.map( (v) => v.patch );
+        const commitScore = await this.geminiService.getCommitScore(
+          commitPatchDatas.join(', '),
+        );
 
-          // 트랜잭션 시작
-          const queryRunner = this.userRepository.manager.connection.createQueryRunner();
-          await queryRunner.connect();
-          await queryRunner.startTransaction();
-
-          try {
-            // 락을 걸고 유저 정보 조회 (한 번에 처리)
-            const user = await queryRunner.manager.findOne(UserEntity, {
-              where: { githubId: commitData.author.login },
-              lock: { mode: 'pessimistic_write' }
-            });
-            if (!user) {
-              throw new UserNotFoundException();
-            }
-
-            const lastCoinDate = formattedDate(user.lastCoinDate, 'yyyy-MM-dd');
-            if (!lastCoinDate || lastCoinDate !== today) {
-              // 새로운 날짜인 경우 일일 코인 획득량 초기화
-              await queryRunner.manager.update(UserEntity, user.id, {
-                dailyCoinAmount: 0,
-                lastCoinDate: today
-              });
-              user.dailyCoinAmount = 0;
-            }
-
-            // 남은 코인 계산
-            const remainingCoins = MAX_COIN_AMOUNT - user.dailyCoinAmount;
-            const actualCoinAmount = Math.min(commitScore, remainingCoins);
-
-            // 표현된 점수를 블록체인 서버에 보내기
-            await this.walletService.postReward(user.id, commitData.sha, actualCoinAmount);
-
-            await this.coinRepository.save({
-              id: commitData.sha,
-              amount: actualCoinAmount,
-              message: commitData.commit.message,
-              repoName: fullName,
-              user: { id: user.id },
-            });
-
-            await queryRunner.manager.update(UserEntity, user.id, {
-              totalCommits: user.totalCommits + 1,
-              dailyCoinAmount: user.dailyCoinAmount + actualCoinAmount
-            });
-
-            await queryRunner.commitTransaction();
-
-            // 새로운 코인이 추가되었으므로 해당 사용자의 모든 페이지 캐시 삭제
-            await this._clearUserCache(user.id, '새로운 코인 추가 후');
-          } catch (error) {
-            await queryRunner.rollbackTransaction();
-            console.error(`커밋 처리 중 오류 발생 (커밋 ID: ${commitId}, 사용자: ${commitData.author.login}): ${error.message}`);
-            throw error;
-          } finally {
-            await queryRunner.release();
-          }
-        } catch (error) {
-          console.error(`커밋 ID ${commitId} 처리 중 오류 발생: ${error.message}`);
-          throw error;
+        // 유저 정보 조회 (락 없이)
+        user = await this.userRepository.findOne({ where: { githubId: commitData.author.login } });
+        if (!user) {
+          throw new UserNotFoundException();
         }
-      }),
-    );
 
-    // 전체 결과를 리턴하거나, 실패한 커밋 ID를 모아서 후처리 가능
-    const failedCommits = results
-      .map((res, i) => (res.status === 'rejected' ? commitIds[i] : null))
-      .filter((v): v is string => v !== null);
+        const lastCoinDate = formattedDate(user.lastCoinDate, 'yyyy-MM-dd');
+        if (!lastCoinDate || lastCoinDate !== today) {
+          user.dailyCoinAmount = 0;
+        }
 
-    if (failedCommits.length > 0) {
-      console.warn(
-        `일부 커밋 처리 실패: ${failedCommits.join(', ')}`,
-      );
+        // 남은 코인 계산
+        const remainingCoins = MAX_COIN_AMOUNT - user.dailyCoinAmount;
+        actualCoinAmount = Math.min(commitScore, remainingCoins);
+
+        // 1. 외부 API 먼저 호출
+        await this.walletService.postReward(user.id, commitData.sha, actualCoinAmount);
+
+        // 2. 외부 API 성공 시에만 트랜잭션 시작 및 DB 저장
+        const queryRunner = this.userRepository.manager.connection.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+        await queryRunner.query('SET SESSION innodb_lock_wait_timeout = 30');
+
+        try {
+          // 락을 걸고 유저 정보 재조회 (동일 트랜잭션 내에서)
+          const lockedUser = await queryRunner.manager.findOne(UserEntity, {
+            where: { githubId: commitData.author.login },
+            lock: { mode: 'pessimistic_write' }
+          });
+          if (!lockedUser) {
+            throw new UserNotFoundException();
+          }
+
+          const lockedLastCoinDate = formattedDate(lockedUser.lastCoinDate, 'yyyy-MM-dd');
+          if (!lockedLastCoinDate || lockedLastCoinDate !== today) {
+            await queryRunner.manager.update(UserEntity, lockedUser.id, {
+              dailyCoinAmount: 0,
+              lastCoinDate: today
+            });
+            lockedUser.dailyCoinAmount = 0;
+          }
+
+          const lockedRemainingCoins = MAX_COIN_AMOUNT - lockedUser.dailyCoinAmount;
+          const lockedActualCoinAmount = Math.min(commitScore, lockedRemainingCoins);
+
+          await this.coinRepository.save({
+            id: commitData.sha,
+            amount: lockedActualCoinAmount,
+            message: commitData.commit.message,
+            repoName: fullName,
+            user: { id: lockedUser.id },
+          });
+
+          await queryRunner.manager.update(UserEntity, lockedUser.id, {
+            totalCommits: lockedUser.totalCommits + 1,
+            dailyCoinAmount: lockedUser.dailyCoinAmount + lockedActualCoinAmount
+          });
+
+          await queryRunner.commitTransaction();
+
+          // 새로운 코인이 추가되었으므로 해당 사용자의 모든 페이지 캐시 삭제
+          await this._clearUserCache(lockedUser.id, '새로운 코인 추가 후');
+        } catch (error) {
+          await queryRunner.rollbackTransaction();
+          console.error(`커밋 처리 중 오류 발생 (커밋 ID: ${commitId}, 사용자: ${commitData.author.login}): ${error.message}`);
+          throw error;
+        } finally {
+          await queryRunner.release();
+        }
+      } catch (error) {
+        console.error(`커밋 ID ${commitId} 처리 중 오류 발생: ${error.message}`);
+        throw error;
+      }
     }
   }
 
