@@ -9,6 +9,7 @@ import { WalletService } from 'src/wallet/wallet.service';
 import { RedisUtilService } from 'src/util-module/redis/redis-util.service';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
 import { formattedDate, generateToday, getTodayStartEnd } from 'src/common/util/date-fn';
+import { AlreadyCoinExistException } from 'src/exception/custom-exception/already-coin-exist.exception';
 
 @Injectable()
 export class CoinService {
@@ -48,6 +49,12 @@ export class CoinService {
   private async _processCommit(fullName: string, commitId: string, today: string) {
     try {
       const commitData = await this.githubService.getCommitData(fullName, commitId);
+
+      const coin = await this.coinRepository.findOne({
+        where: { id: commitData.sha },
+      });
+      if (coin) throw new AlreadyCoinExistException();
+
       const commitPatch = commitData.files.map((file) => file.patch).join(', ');
       const commitScore = await this.geminiService.getCommitScore(commitPatch);
   
