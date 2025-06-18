@@ -18,6 +18,18 @@ export class RedisUtilService {
     }
   }
 
+  async getJson<T>(key: string): Promise<T | null> {
+    try {
+      const data = await this.redisClient.get(key);
+      if (!data) return null;
+      
+      return JSON.parse(data) as T;
+    } catch (error) {
+      console.error(`Redis에서 JSON 키(${key}) 조회/파싱 실패: ${error.message}`);
+      return null;
+    }
+  }
+
   async set(key: string, value: string, ttlSeconds?: number): Promise<boolean> {
     try {
       if (ttlSeconds) {
@@ -28,6 +40,21 @@ export class RedisUtilService {
       return true;
     } catch (error) {
       console.error(`Redis에 키(${key}) 저장 실패: ${error.message}`);
+      return false;
+    }
+  }
+
+  async setJson(key: string, value: any, ttlSeconds?: number): Promise<boolean> {
+    try {
+      const jsonValue = JSON.stringify(value);
+      if (ttlSeconds) {
+        await this.redisClient.set(key, jsonValue, 'EX', ttlSeconds);
+      } else {
+        await this.redisClient.set(key, jsonValue);
+      }
+      return true;
+    } catch (error) {
+      console.error(`Redis에 JSON 키(${key}) 저장 실패: ${error.message}`);
       return false;
     }
   }
