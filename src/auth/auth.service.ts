@@ -16,6 +16,7 @@ import { GithubRepoI } from 'src/common/interface/git-repo.interface';
 import { GithubHookI } from 'src/common/interface/git-hook.interface';
 import { WithdrawRequest } from './dto/request/withdraw.request';
 import { CoinEntity } from 'src/coin/entity/coin.entity';
+import { Not } from 'typeorm';
 
 @Injectable()
 export class AuthService {
@@ -115,6 +116,38 @@ export class AuthService {
 
   async getUserProfile(userId: string) {
     return await this.userRepository.findOne({ where: { id: userId } });
+  }
+
+  async getOtherUsers(userId: string, page: number = 0) {
+    const take = 20;
+    const skip = page * take;
+
+    const [users, total] = await this.userRepository.findAndCount({
+      where: { id: Not(userId) }, // 본인 제외
+      select: {
+        id: true,
+        githubId: true,
+        githubImageUrl: true,
+        totalCommits: true,
+        dailyCoinAmount: true,
+        lastCoinDate: true,
+      },
+      order: { totalCommits: 'DESC' }, // 총 커밋 수로 정렬
+      skip,
+      take,
+    });
+
+    return {
+      users,
+      pagination: {
+        page,
+        take,
+        total,
+        totalPages: Math.ceil(total / take),
+        hasNext: skip + take < total,
+        hasPrev: page > 0,
+      },
+    };
   }
 
   async withdraw(userId: string, withdrawReq: WithdrawRequest) {
