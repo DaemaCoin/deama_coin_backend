@@ -1,7 +1,10 @@
 import { CoinEntity } from 'src/coin/entity/coin.entity';
-import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryColumn, Index } from 'typeorm';
 
 @Entity('user')
+@Index(['totalCommits'])
+@Index(['dailyCoinAmount'])
+@Index(['lastCoinDate'])
 export class UserEntity {
   @PrimaryColumn({
     unique: true,

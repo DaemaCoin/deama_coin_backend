@@ -5,9 +5,12 @@ import {
   Entity,
   ManyToOne,
   PrimaryColumn,
+  Index,
 } from 'typeorm';
 
 @Entity('coin')
+@Index(['user', 'createdAt'])
+@Index(['createdAt'])
 export class CoinEntity {
   @PrimaryColumn()
   id: string;
