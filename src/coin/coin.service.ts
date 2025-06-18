@@ -8,7 +8,7 @@ import { UserEntity } from 'src/auth/entity/user.entity';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
 import { WalletService } from 'src/wallet/wallet.service';
 import { RedisUtilService } from 'src/util-module/redis/redis-util.service';
-import { formattedDate, generateToday } from 'src/common/util/date-fn';
+import { formattedDate, generateToday, getTodayStartEnd } from 'src/common/util/date-fn';
 
 @Injectable()
 export class CoinService {
@@ -29,33 +29,44 @@ export class CoinService {
   async commitHook(fullName: string, commitIds: string[]) {
     const MAX_COIN_AMOUNT = 20;
     const today = generateToday();
-  
+
     const results = await Promise.allSettled(
       commitIds.map(async (commitId) => {
         try {
-          const commitData = await this.githubService.getCommitData(fullName, commitId);
-  
-          const commitPatchDatas: string[] = commitData.files.map((v) => v.patch);
-          const commitScore = await this.geminiService.getCommitScore(commitPatchDatas.join(', '));
-  
+          const commitData = await this.githubService.getCommitData(
+            fullName,
+            commitId,
+          );
+
+          const commitPatchDatas: string[] = commitData.files.map(
+            (v) => v.patch,
+          );
+          const commitScore = await this.geminiService.getCommitScore(
+            commitPatchDatas.join(', '),
+          );
+
           // 유저 정보 조회
           const user = await this.userRepository.findOne({
             where: { githubId: commitData.author.login },
           });
           if (!user) throw new UserNotFoundException();
-  
+
           const lastCoinDate = formattedDate(user.lastCoinDate, 'yyyy-MM-dd');
           if (!lastCoinDate || lastCoinDate !== today) {
             user.dailyCoinAmount = 0;
             user.lastCoinDate = new Date(today);
           }
-  
+
           const remainingCoins = MAX_COIN_AMOUNT - user.dailyCoinAmount;
           const actualCoinAmount = Math.min(commitScore, remainingCoins);
-  
+
           // 1. 외부 API 먼저 호출
-          await this.walletService.postReward(user.id, commitData.sha, actualCoinAmount);
-  
+          await this.walletService.postReward(
+            user.id,
+            commitData.sha,
+            actualCoinAmount,
+          );
+
           // 2. DB 저장 (트랜잭션 없이 순차적으로 처리)
           await this.coinRepository.save({
             id: commitData.sha,
@@ -64,27 +75,31 @@ export class CoinService {
             repoName: fullName,
             user: { id: user.id },
           });
-  
+
           // 3. 사용자 정보 업데이트
           await this.userRepository.update(user.id, {
             totalCommits: user.totalCommits + 1,
             dailyCoinAmount: user.dailyCoinAmount + actualCoinAmount,
             lastCoinDate: user.lastCoinDate,
           });
-  
+
           // 4. 캐시 삭제
           await this._clearUserCache(user.id, '새로운 코인 추가 후');
+          // 오늘 채굴된 코인 개수 캐시도 삭제
+          await this._clearTodayMinedCache(user.id);
         } catch (error) {
-          console.error(`커밋 ID ${commitId} 처리 중 오류 발생: ${error.message}`);
+          console.error(
+            `커밋 ID ${commitId} 처리 중 오류 발생: ${error.message}`,
+          );
           throw error;
         }
       }),
     );
-  
+
     const failedCommits = results
       .map((res, i) => (res.status === 'rejected' ? commitIds[i] : null))
       .filter((v): v is string => v !== null);
-  
+
     if (failedCommits.length > 0) {
       console.warn(`일부 커밋 처리 실패: ${failedCommits.join(', ')}`);
     }
@@ -167,5 +182,64 @@ export class CoinService {
       );
       return false;
     }
+  }
+
+  async getTodayMinedCoins(userId: string) {
+    const { start, end } = getTodayStartEnd();
+    const today = generateToday();
+    const cacheKey = `today_mined_coins:${userId}:${today}`;
+
+    try {
+      const cachedData = await this.redisService.get(cacheKey);
+      if (cachedData) {
+        try {
+          return JSON.parse(cachedData);
+        } catch (parseError) {
+          console.error(
+            `캐시 데이터 파싱 실패 (Key: ${cacheKey}): ${parseError.message}`,
+          );
+          await this._clearCache(cacheKey, '잘못된 캐시 데이터');
+        }
+      }
+
+      const totalAmount = await this._getTodayCoinsFromDB(userId, start, end);
+      const result = { totalAmount };
+
+      // TTL을 적용하여 캐시 저장 (1시간 후 자동 만료)
+      await this.redisService.set(
+        cacheKey,
+        JSON.stringify(result),
+        this.CACHE_TTL,
+      );
+
+      return result;
+    } catch (error) {
+      console.error(
+        `오늘 채굴된 코인 개수 조회 중 오류 (사용자 ID: ${userId}): ${error.message}`,
+      );
+      const totalAmount = await this._getTodayCoinsFromDB(userId, start, end);
+      return { totalAmount };
+    }
+  }
+
+  private async _getTodayCoinsFromDB(
+    userId: string,
+    start: Date,
+    end: Date,
+  ): Promise<number> {
+    const todayCoins = await this.coinRepository
+      .createQueryBuilder('coin')
+      .select('SUM(coin.amount)', 'totalAmount')
+      .where('coin.userId = :userId', { userId })
+      .andWhere('coin.createdAt BETWEEN :start AND :end', { start, end })
+      .getRawOne();
+
+    return Number(todayCoins?.totalAmount || 0);
+  }
+
+  private async _clearTodayMinedCache(userId: string): Promise<void> {
+    const today = generateToday();
+    const cacheKey = `today_mined_coins:${userId}:${today}`;
+    await this._clearCache(cacheKey, '새로운 코인 추가로 인한 캐시 무효화');
   }
 }
