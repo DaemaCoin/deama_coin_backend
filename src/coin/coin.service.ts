@@ -47,7 +47,7 @@ export class CoinService {
           const lastCoinDate = formattedDate(user.lastCoinDate, 'yyyy-MM-dd');
           if (!lastCoinDate || lastCoinDate !== today) {
             user.dailyCoinAmount = 0;
-            user.lastCoinDate = today;
+            user.lastCoinDate = new Date(today);
           }
   
           const remainingCoins = MAX_COIN_AMOUNT - user.dailyCoinAmount;
