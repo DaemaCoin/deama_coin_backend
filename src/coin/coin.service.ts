@@ -10,6 +10,8 @@ import { RedisUtilService } from 'src/util-module/redis/redis-util.service';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
 import { formattedDate, generateToday, getTodayStartEnd } from 'src/common/util/date-fn';
 import { AlreadyCoinExistException } from 'src/exception/custom-exception/already-coin-exist.exception';
+import { InsufficientBalanceException } from 'src/exception/custom-exception/insufficient-balance.exception';
+import { TransferRequest } from 'src/common/util/transfer.request.dto';
 
 @Injectable()
 export class CoinService {
@@ -186,6 +188,90 @@ export class CoinService {
       return Number(todayCoins?.totalAmount || 0);
     } catch (error) {
       console.error(`DB에서 오늘 채굴된 코인 개수 조회 실패 (userId: ${userId}): ${error.message}`);
+      throw error;
+    }
+  }
+
+  private async _recordTransfer(fromUserId: string, toUserId: string, amount: number) {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000;
+    
+    for (let retryCount = 0; retryCount < MAX_RETRIES; retryCount++) {
+      const queryRunner = this.coinRepository.manager.connection.createQueryRunner();
+      
+      try {
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+        
+        const transferHash = `transfer_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+        
+        // 송금자 기록 (음수로 저장)
+        await queryRunner.manager.save(CoinEntity, {
+          id: `${transferHash}_from`,
+          amount: -amount, // 송금은 음수로 기록
+          message: `${toUserId}에게 ${amount} 코인 이체`,
+          repoName: 'Transfer',
+          user: { id: fromUserId },
+        });
+
+        // 수신자 기록 (양수로 저장)
+        await queryRunner.manager.save(CoinEntity, {
+          id: `${transferHash}_to`,
+          amount: amount, // 수신은 양수로 기록
+          message: `${fromUserId}로부터 ${amount} 코인 수신`,
+          repoName: 'Transfer',
+          user: { id: toUserId },
+        });
+
+        await queryRunner.commitTransaction();
+        
+        // 트랜잭션 성공 후 캐시 무효화
+        await Promise.all([
+          this.redisService.deleteByPattern(`${this.CACHE_PREFIX}${fromUserId}:*`),
+          this.redisService.deleteByPattern(`${this.CACHE_PREFIX}${toUserId}:*`),
+        ]);
+
+        console.log(`이체 기록 저장 완료 (from: ${fromUserId}, to: ${toUserId}, amount: ${amount})`);
+        return; // 성공 시 함수 종료
+        
+      } catch (error) {
+        await queryRunner.rollbackTransaction();
+        
+        if (retryCount < MAX_RETRIES - 1) {
+          console.warn(`이체 기록 저장 실패, ${retryCount + 1}번째 재시도... (from: ${fromUserId}, to: ${toUserId}, amount: ${amount}): ${error.message}`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+          continue;
+        } else {
+          console.error(`이체 기록 저장 최종 실패 (from: ${fromUserId}, to: ${toUserId}, amount: ${amount}): ${error.message}`);
+          throw error;
+        }
+      } finally {
+        await queryRunner.release();
+      }
+    }
+  }
+
+  async transfer(fromUserId: string, transferRequest: TransferRequest) {
+    const { to, amount } = transferRequest;
+
+    try {
+      // 수신자 존재 확인
+      const toUser = await this.userRepository.findOne({ where: { id: to } });
+      if (!toUser) throw new UserNotFoundException();
+
+      // 계좌 잔액 확인
+      const fromUserBalance = await this.walletService.getWallet(fromUserId);
+      if(fromUserBalance.balance < amount) throw new InsufficientBalanceException();
+
+      // WalletService를 통해 실제 이체 수행
+      const result = await this.walletService.transfer(fromUserId, transferRequest);
+
+      // 이체 기록을 coinRepository에 저장
+      await this._recordTransfer(fromUserId, to, Number(amount));
+
+      return result;
+    } catch (error) {
+      console.error(`코인 이체 실패 (from: ${fromUserId}, to: ${to}, amount: ${amount}): ${error.message}`);
       throw error;
     }
   }

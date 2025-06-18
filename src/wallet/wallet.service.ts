@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { TransferRequest } from './dto/request/transfer.request';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Repository } from 'typeorm';
@@ -7,12 +6,13 @@ import { UserNotFoundException } from 'src/exception/custom-exception/user-not-f
 import { CoinEntity } from '../coin/entity/coin.entity';
 import { BlockchainClient } from './block-chain-client';
 import { RedisUtilService } from 'src/util-module/redis/redis-util.service';
+import { TransferRequest } from 'src/common/util/transfer.request.dto';
 
 @Injectable()
 export class WalletService {
   private readonly WALLET_CACHE_PREFIX = 'wallet:';
   private readonly WALLET_CACHE_TTL = 10;
-  
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
@@ -50,7 +50,7 @@ export class WalletService {
     }
   }
 
-  async getWallet(owner: string) {
+  async getWallet(owner: string): Promise<{ owner: string; balance: number }> {
     const cacheKey = `${this.WALLET_CACHE_PREFIX}${owner}`;
 
     try {
@@ -59,9 +59,13 @@ export class WalletService {
       if (cachedWallet) return cachedWallet;
 
       // 캐시에 없으면 Blockchain 서버에서 조회
-      const wallet = await this.bcClient.fetch<any>(`/api/wallet/${owner}`, 200, {
-        method: 'GET',
-      });
+      const wallet = await this.bcClient.fetch<any>(
+        `/api/wallet/${owner}`,
+        200,
+        {
+          method: 'GET',
+        },
+      );
 
       // Redis에 저장 (RedisUtilService의 setJson 사용)
       await this.redisService.setJson(cacheKey, wallet, this.WALLET_CACHE_TTL);
@@ -80,14 +84,18 @@ export class WalletService {
       const toUser = await this.userRepository.findOne({ where: { id: to } });
       if (!toUser) throw new UserNotFoundException();
 
-      const result = await this.bcClient.fetch<any>(`/api/wallet/transfer`, 202, {
-        method: 'POST',
-        body: JSON.stringify({
-          from: owner,
-          to,
-          amount,
-        }),
-      });
+      const result = await this.bcClient.fetch<any>(
+        `/api/wallet/transfer`,
+        202,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            from: owner,
+            to,
+            amount,
+          }),
+        },
+      );
 
       // 이체 후 관련 지갑들의 캐시 무효화
       await Promise.all([
@@ -97,7 +105,9 @@ export class WalletService {
 
       return result;
     } catch (error) {
-      console.error(`지갑 이체 실패 (from: ${owner}, to: ${to}, amount: ${amount}): ${error.message}`);
+      console.error(
+        `지갑 이체 실패 (from: ${owner}, to: ${to}, amount: ${amount}): ${error.message}`,
+      );
       throw error;
     }
   }
@@ -106,14 +116,18 @@ export class WalletService {
     const { to, amount } = transferRequest;
 
     try {
-      const result = await this.bcClient.fetch<any>(`/api/wallet/transfer`, 202, {
-        method: 'POST',
-        body: JSON.stringify({
-          from: owner,
-          to,
-          amount,
-        }),
-      });
+      const result = await this.bcClient.fetch<any>(
+        `/api/wallet/transfer`,
+        202,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            from: owner,
+            to,
+            amount,
+          }),
+        },
+      );
 
       // 익명 이체 후 관련 지갑들의 캐시 무효화
       await Promise.all([
@@ -123,7 +137,9 @@ export class WalletService {
 
       return result;
     } catch (error) {
-      console.error(`익명 지갑 이체 실패 (from: ${owner}, to: ${to}, amount: ${amount}): ${error.message}`);
+      console.error(
+        `익명 지갑 이체 실패 (from: ${owner}, to: ${to}, amount: ${amount}): ${error.message}`,
+      );
       throw error;
     }
   }
@@ -144,7 +160,9 @@ export class WalletService {
 
       return result;
     } catch (error) {
-      console.error(`보상 지급 실패 (owner: ${owner}, commitHash: ${commitHash}, amount: ${commitScore}): ${error.message}`);
+      console.error(
+        `보상 지급 실패 (owner: ${owner}, commitHash: ${commitHash}, amount: ${commitScore}): ${error.message}`,
+      );
       throw error;
     }
   }

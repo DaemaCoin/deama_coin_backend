@@ -1,4 +1,3 @@
-import { Transform } from 'class-transformer';
 import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -8,9 +7,8 @@ export class TransferRequest {
   @IsString()
   to: string;
 
-  @ApiProperty({ description: '전송할 금액', example: '1000' })
-  @Transform(({ value }) => Number(value))
+  @ApiProperty({ description: '전송할 금액', example: 1000, type: Number })
   @IsNotEmpty({ message: '얼마를 보낼지 확인해 주세요' })
-  @IsNumber()
-  amount: string;
+  @IsNumber({}, { message: '숫자 형식으로 입력해 주세요' })
+  amount: number;
 }

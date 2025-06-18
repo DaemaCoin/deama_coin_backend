@@ -1,14 +1,16 @@
-import { Controller, Get, Post, Query } from '@nestjs/common';
+import { Controller, Get, Post, Query, Body } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiQuery,
   ApiResponse,
+  ApiBody,
 } from '@nestjs/swagger';
 import { GetCommitData } from 'src/common/decorator/get-commit-ids';
 import { IsPublic } from 'src/common/decorator/is-public';
 import { CoinService } from './coin.service';
 import { GetUserId } from 'src/common/decorator/get-user-id';
+import { TransferRequest } from 'src/common/util/transfer.request.dto';
 
 @Controller('coin')
 export class CoinController {
@@ -56,5 +58,22 @@ export class CoinController {
   @Get('/today-mined')
   async getTodayMinedCoins(@GetUserId() userId: string) {
     return await this.coinService.getTodayMinedCoins(userId);
+  }
+
+  @ApiOperation({
+    summary: '코인 이체',
+    description: '다른 사용자에게 코인을 이체합니다.',
+  })
+  @ApiResponse({ status: 200, description: '이체 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  @ApiResponse({ status: 404, description: '수신자 없음' })
+  @ApiBody({ type: TransferRequest })
+  @ApiBearerAuth()
+  @Post('/transfer')
+  async transfer(
+    @GetUserId() userId: string,
+    @Body() transferRequest: TransferRequest,
+  ) {
+    return await this.coinService.transfer(userId, transferRequest);
   }
 }
