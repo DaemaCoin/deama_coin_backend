@@ -1,4 +1,5 @@
 import { formatInTimeZone } from 'date-fns-tz';
+import { startOfDay, endOfDay } from 'date-fns';
 
 export const generateToday = () => {
   const timeZone = 'Asia/Seoul';
@@ -10,4 +11,11 @@ export const formattedDate = (date: Date, format: string) => {
   const timeZone = 'Asia/Seoul';
   if(!date) return null;
   return formatInTimeZone(date, timeZone, format);
+};
+
+export const getTodayStartEnd = () => {
+  const todayDate = new Date(generateToday());
+  const start = startOfDay(todayDate);
+  const end = endOfDay(todayDate);
+  return { start, end };
 };

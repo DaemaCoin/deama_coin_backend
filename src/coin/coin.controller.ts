@@ -45,4 +45,16 @@ export class CoinController {
   ) {
     return await this.coinService.getCoinHistory(userId, page);
   }
+
+  @ApiOperation({
+    summary: '오늘 채굴된 코인 개수 조회',
+    description: '오늘 채굴된 총 코인 개수를 조회합니다.',
+  })
+  @ApiResponse({ status: 200, description: '오늘 채굴된 코인 개수 조회 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  @ApiBearerAuth()
+  @Get('/today-mined')
+  async getTodayMinedCoins(@GetUserId() userId: string) {
+    return await this.coinService.getTodayMinedCoins(userId);
+  }
 }
