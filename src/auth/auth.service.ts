@@ -99,26 +99,27 @@ export class AuthService {
 
       const { id, image } = await this.githubOAuth(code);
 
-      const user = await this.userRepository.save({
+      await this.userRepository.save({
         id: xquareId,
         githubId: id,
         totalCommits: 0,
         githubImageUrl: image,
       });
 
-      await this.walletService.createWallet(user.id, INIT_BALENCE);
+      await this.walletService.createWallet(xquareId, INIT_BALENCE);
 
       const encodedId = `owner_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
       await this.coinRepository.save({
         id: encodedId,
         message: '초기 코인 지급',
         repoName: 'Start',
-        user: { id: user.id },
+        user: { id: xquareId },
         amount: INIT_BALENCE,
       });
 
-      return await this.generateTokens(user.id);
+      return await this.generateTokens(xquareId);
     } catch (error) {
+      await this.coinRepository.delete({ user: { id: xquareId } });
       await this.userRepository.delete(xquareId);
       throw error;
     }
