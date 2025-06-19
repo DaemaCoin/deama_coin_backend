@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { Repository } from 'typeorm';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
-import { CoinEntity } from '../coin/entity/coin.entity';
 import { BlockchainClient } from './block-chain-client';
 import { RedisUtilService } from 'src/util-module/redis/redis-util.service';
 import { TransferRequest } from 'src/common/util/transfer.request.dto';
@@ -16,8 +15,6 @@ export class WalletService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
-    @InjectRepository(CoinEntity)
-    private readonly coinRepository: Repository<CoinEntity>,
     private readonly bcClient: BlockchainClient,
     private readonly redisService: RedisUtilService,
   ) {}
@@ -30,15 +27,6 @@ export class WalletService {
           owner,
           initialBalance,
         }),
-      });
-
-      const encodedId = Buffer.from(owner).toString('base64');
-      await this.coinRepository.save({
-        id: encodedId,
-        message: '초기 코인 지급',
-        repoName: 'Start',
-        user: { id: owner },
-        amount: initialBalance,
       });
 
       // 지갑 생성 후 캐시 무효화

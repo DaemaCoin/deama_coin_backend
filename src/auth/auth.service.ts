@@ -88,6 +88,7 @@ export class AuthService {
   }
 
   async register(dto: RegisterRequest) {
+    const INIT_BALENCE = 200
     const { xquareId, code } = dto;
 
     try {
@@ -105,7 +106,16 @@ export class AuthService {
         githubImageUrl: image,
       });
 
-      await this.walletService.createWallet(user.id, 200);
+      await this.walletService.createWallet(user.id, INIT_BALENCE);
+
+      const encodedId = `owner_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      await this.coinRepository.save({
+        id: encodedId,
+        message: '초기 코인 지급',
+        repoName: 'Start',
+        user: { id: user.id },
+        amount: INIT_BALENCE,
+      });
 
       return await this.generateTokens(user.id);
     } catch (error) {
