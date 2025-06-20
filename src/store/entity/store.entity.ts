@@ -22,16 +22,16 @@ export class StoreEntity {
   @Column()
   storeImage: string;
 
-  @Column()
+  @Column({ unique: true })
   phoneNumber: string;
 
   @Column({ default: true })
   isActive: boolean;
 
-  @OneToMany(() => ProductEntity, product => product.store)
+  @OneToMany(() => ProductEntity, (product) => product.store)
   products: ProductEntity[];
 
-  @OneToMany(() => OrderEntity, order => order.store)
+  @OneToMany(() => OrderEntity, (order) => order.store)
   orders: OrderEntity[];
 
   @CreateDateColumn()

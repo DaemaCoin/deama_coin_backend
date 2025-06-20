@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -32,15 +32,36 @@ export class StoreService {
   ) {}
 
   // 입점 신청
-  async applyStore(dto: CreateStoreApplicationDto): Promise<StoreApplicationEntity> {
-    const existingApplication = await this.storeApplicationRepository.findOne({
-      where: { phoneNumber: dto.phoneNumber, status: StoreApplicationStatus.PENDING }
+  async applyStore(
+    dto: CreateStoreApplicationDto,
+  ): Promise<StoreApplicationEntity> {
+    let existing = await this.storeApplicationRepository.findOne({
+      where: { phoneNumber: dto.phoneNumber },
     });
 
-    if (existingApplication) {
-      throw new StoreException('이미 대기 중인 신청이 있습니다.', HttpStatus.BAD_REQUEST);
+    // 기존 신청이 존재할 경우
+    if (existing) {
+      const isRejected = existing.status === StoreApplicationStatus.REJECTED;
+      const isPending = existing.status === StoreApplicationStatus.PENDING;
+
+      if (isRejected) {
+        existing = {
+          ...existing,
+          ...dto,
+          status: StoreApplicationStatus.PENDING,
+          rejectionReason: null,
+        };
+        return this.storeApplicationRepository.save(existing);
+      }
+
+      if (isPending) {
+        throw new StoreException('이미 대기 중인 신청이 있습니다.', HttpStatus.BAD_REQUEST );
+      }
+
+      throw new StoreException('한 개의 전화번호는 한 개의 상점만 열 수 있습니다.', HttpStatus.BAD_REQUEST );
     }
 
+    // 새로운 신청
     const application = this.storeApplicationRepository.create(dto);
     return this.storeApplicationRepository.save(application);
   }
@@ -48,9 +69,9 @@ export class StoreService {
   // 상점 로그인
   async login(dto: StoreLoginDto): Promise<{ accessToken: string }> {
     const encodedPassword = Buffer.from(dto.storeId).toString('base64');
-    
+
     const store = await this.storeRepository.findOne({
-      where: { storeId: dto.storeId, password: encodedPassword }
+      where: { storeId: dto.storeId, password: encodedPassword },
     });
 
     if (!store) {
@@ -69,22 +90,22 @@ export class StoreService {
       ...dto,
       storeId,
     });
-    return this.productRepository.save(product);
+    return await this.productRepository.save(product);
   }
 
   // 상품 목록 조회 (상점용)
   async getMyProducts(storeId: number): Promise<ProductEntity[]> {
-    return this.productRepository.find({
+    return await this.productRepository.find({
       where: { storeId, isActive: true },
-      order: { createdAt: 'DESC' }
+      order: { createdAt: 'DESC' },
     });
   }
 
   // 상품 목록 조회 (고객용)
   async getStoreProducts(storeId: number): Promise<ProductEntity[]> {
-    return this.productRepository.find({
+    return await this.productRepository.find({
       where: { storeId, isActive: true },
-      order: { createdAt: 'DESC' }
+      order: { createdAt: 'DESC' },
     });
   }
 
@@ -92,20 +113,20 @@ export class StoreService {
   async createOrder(id: string, dto: CreateOrderDto): Promise<OrderEntity> {
     // 1. 지갑 잔액 확인
     const walletInfo = await this.walletService.getWallet(dto.userId);
-    
+
     // 2. 주문 상품들의 총 금액 계산
     let totalAmount = 0;
     const orderItemsData = [];
 
     const store = await this.storeRepository.findOne({
-      where: { storeId: id }
-    })
+      where: { storeId: id },
+    });
 
     const storeId: number = store.id;
 
     for (const item of dto.orderItems) {
       const product = await this.productRepository.findOne({
-        where: { id: item.productId, storeId, isActive: true }
+        where: { id: item.productId, storeId, isActive: true },
       });
 
       if (!product) {
@@ -152,25 +173,25 @@ export class StoreService {
     }
 
     // 7. 완전한 주문 정보 반환
-    return this.orderRepository.findOne({
+    return await this.orderRepository.findOne({
       where: { id: savedOrder.id },
-      relations: ['orderItems', 'orderItems.product']
+      relations: ['orderItems', 'orderItems.product'],
     });
   }
 
   // 주문 목록 조회 (상점용)
   async getMyOrders(storeId: number): Promise<OrderEntity[]> {
-    return this.orderRepository.find({
+    return await this.orderRepository.find({
       where: { storeId },
       relations: ['orderItems', 'orderItems.product'],
-      order: { createdAt: 'DESC' }
+      order: { createdAt: 'DESC' },
     });
   }
 
   // 주문 완료 처리
   async completeOrder(storeId: number, orderId: number): Promise<OrderEntity> {
     const order = await this.orderRepository.findOne({
-      where: { id: orderId, storeId }
+      where: { id: orderId, storeId },
     });
 
     if (!order) {
@@ -178,6 +199,6 @@ export class StoreService {
     }
 
     order.status = 'COMPLETED' as any;
-    return this.orderRepository.save(order);
+    return await this.orderRepository.save(order);
   }
-} 
+}

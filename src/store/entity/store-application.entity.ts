@@ -20,7 +20,7 @@ export class StoreApplicationEntity {
   @Column()
   storeImage: string;
 
-  @Column()
+  @Column({ unique: true })
   phoneNumber: string;
 
   @Column({

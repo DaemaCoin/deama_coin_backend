@@ -1,5 +1,6 @@
-import { IsString, IsNotEmpty, IsPhoneNumber } from 'class-validator';
+import { IsString, IsNotEmpty, IsPhoneNumber, IsEnum, ValidateIf } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { StoreApplicationStatus } from '../entity/store-application.entity';
 
 export class CreateStoreApplicationDto {
   @ApiProperty({ description: '상점 이름', example: '맛있는 카페' })
@@ -24,12 +25,22 @@ export class CreateStoreApplicationDto {
 }
 
 export class UpdateStoreApplicationStatusDto {
-  @ApiProperty({ description: '승인/거절 상태', enum: ['APPROVED', 'REJECTED'], example: 'APPROVED' })
+  @ApiProperty({
+    description: '승인/거절 상태',
+    enum: [StoreApplicationStatus.APPROVED, StoreApplicationStatus.REJECTED],
+    example: StoreApplicationStatus.APPROVED,
+  })
+  @IsEnum(StoreApplicationStatus)
+  @IsNotEmpty()
+  status: StoreApplicationStatus;
+
+  @ApiProperty({
+    description: '거절 사유 (거절 시에만 필요)',
+    required: false,
+    example: '서류 불완전',
+  })
+  @ValidateIf((o) => o.status === StoreApplicationStatus.REJECTED)
   @IsString()
   @IsNotEmpty()
-  status: 'APPROVED' | 'REJECTED';
-
-  @ApiProperty({ description: '거절 사유 (거절 시에만 필요)', required: false, example: '서류 불완전' })
-  @IsString()
   rejectionReason?: string;
-} 
+}

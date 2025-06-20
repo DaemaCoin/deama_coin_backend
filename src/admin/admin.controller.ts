@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Param, Body, UseGuards, Patch } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiSecurity, ApiParam, ApiBody } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { UpdateStoreApplicationStatusDto } from '../store/dto/store-application.dto';
@@ -29,7 +29,7 @@ export class AdminController {
   @ApiResponse({ status: 404, description: '신청을 찾을 수 없음' })
   @ApiParam({ name: 'id', description: '신청 ID' })
   @ApiBody({ type: UpdateStoreApplicationStatusDto })
-  @Put('store-applications/:id/status')
+  @Patch('store-applications/:id/status')
   async updateStoreApplicationStatus(
     @Param('id') id: string,
     @Body() dto: UpdateStoreApplicationStatusDto
@@ -52,7 +52,7 @@ export class AdminController {
   @ApiResponse({ status: 401, description: 'API Key 인증 실패' })
   @ApiResponse({ status: 404, description: '상점을 찾을 수 없음' })
   @ApiParam({ name: 'id', description: '상점 ID' })
-  @Put('stores/:id/toggle-status')
+  @Patch('stores/:id/toggle-status')
   async toggleStoreStatus(@Param('id') id: string) {
     return this.adminService.toggleStoreStatus(parseInt(id));
   }

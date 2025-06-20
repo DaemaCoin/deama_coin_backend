@@ -1,7 +1,10 @@
-import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { StoreApplicationEntity, StoreApplicationStatus } from '../store/entity/store-application.entity';
+import {
+  StoreApplicationEntity,
+  StoreApplicationStatus,
+} from '../store/entity/store-application.entity';
 import { StoreEntity } from '../store/entity/store.entity';
 import { UpdateStoreApplicationStatusDto } from '../store/dto/store-application.dto';
 import { WalletService } from 'src/wallet/wallet.service';
@@ -19,38 +22,36 @@ export class AdminService {
 
   // 입점 신청 목록 조회
   async getStoreApplications(): Promise<StoreApplicationEntity[]> {
-    return this.storeApplicationRepository.find({
-      order: { createdAt: 'DESC' }
+    return await this.storeApplicationRepository.find({
+      order: { createdAt: 'DESC' },
     });
   }
 
   // 입점 신청 승인/거절
   async updateStoreApplicationStatus(
-    applicationId: number, 
-    dto: UpdateStoreApplicationStatusDto
+    applicationId: number,
+    dto: UpdateStoreApplicationStatusDto,
   ): Promise<StoreApplicationEntity> {
     const application = await this.storeApplicationRepository.findOne({
-      where: { id: applicationId }
+      where: { id: applicationId, status: StoreApplicationStatus.PENDING },
     });
 
     if (!application) {
-throw new AdminException('신청을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
+      throw new AdminException('신청을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
     }
 
-    // 상태 업데이트
-    application.status = dto.status as StoreApplicationStatus;
-    if (dto.status === 'REJECTED') {
-      application.rejectionReason = dto.rejectionReason;
-    }
+    const { status, rejectionReason } = dto;
+
+    application.status = status;
+    application.rejectionReason = status === StoreApplicationStatus.REJECTED ? rejectionReason : null;
 
     const updatedApplication = await this.storeApplicationRepository.save(application);
 
     // 승인된 경우 상점 계정 생성
-    if (dto.status === 'APPROVED') {
+    if (status === StoreApplicationStatus.APPROVED) {
+      await this.walletService.createWallet(application.storeName, 0);
       await this.createStoreAccount(application);
     }
-
-    this.walletService.createWallet(application.storeName, 0);
 
     return updatedApplication;
   }
@@ -59,6 +60,11 @@ throw new AdminException('신청을 찾을 수 없습니다.', HttpStatus.NOT_FO
   private async createStoreAccount(application: StoreApplicationEntity): Promise<StoreEntity> {
     const storeId = application.storeName;
     const password = Buffer.from(application.storeName).toString('base64');
+
+    let exist = await this.storeRepository.findOne({
+      where: [{ storeId }, { phoneNumber: application.phoneNumber }],
+    });
+    if(exist) throw new AdminException('상점이름 또는 전화번호가 이미 존재합니다.', HttpStatus.BAD_REQUEST);
 
     const store = this.storeRepository.create({
       storeId,
@@ -75,14 +81,14 @@ throw new AdminException('신청을 찾을 수 없습니다.', HttpStatus.NOT_FO
   // 상점 목록 조회
   async getStores(): Promise<StoreEntity[]> {
     return this.storeRepository.find({
-      order: { createdAt: 'DESC' }
+      order: { createdAt: 'DESC' },
     });
   }
 
   // 상점 활성화/비활성화
   async toggleStoreStatus(storeId: number): Promise<StoreEntity> {
     const store = await this.storeRepository.findOne({
-      where: { id: storeId }
+      where: { id: storeId },
     });
 
     if (!store) {
@@ -92,4 +98,4 @@ throw new AdminException('신청을 찾을 수 없습니다.', HttpStatus.NOT_FO
     store.isActive = !store.isActive;
     return this.storeRepository.save(store);
   }
-} 
+}
