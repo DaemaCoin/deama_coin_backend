@@ -1,4 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export enum StoreApplicationStatus {
   PENDING = 'PENDING',
@@ -11,7 +17,7 @@ export class StoreApplicationEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ unique: true })
   storeName: string;
 
   @Column('text')
@@ -30,12 +36,12 @@ export class StoreApplicationEntity {
   })
   status: StoreApplicationStatus;
 
-  @Column({ nullable: true })
-  rejectionReason?: string;
+  @Column({ type: 'text', nullable: true })
+  rejectionReason: string | null;
 
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+}

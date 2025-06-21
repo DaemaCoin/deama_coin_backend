@@ -7,13 +7,10 @@ export class StoreEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column()
+  password: string;
+
   @Column({ unique: true })
-  storeId: string; // 상점 이름을 그대로 사용
-
-  @Column()
-  password: string; // base64 인코딩된 상점 이름
-
-  @Column()
   storeName: string;
 
   @Column('text')

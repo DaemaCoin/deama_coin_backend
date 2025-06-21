@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards, Request, BadRequestException, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { StoreService } from './store.service';
 import { CreateStoreApplicationDto } from './dto/store-application.dto';
@@ -64,12 +64,8 @@ export class StoreController {
   @ApiParam({ name: 'storeId', description: '상점 ID' })
   @Public()
   @Get(':storeId/products')
-  async getStoreProducts(@Param('storeId') storeId: string) {
-    const parsedStoreId = parseInt(storeId);
-    if (isNaN(parsedStoreId)) {
-      throw new BadRequestException('유효하지 않은 상점 ID입니다.');
-    }
-    return this.storeService.getStoreProducts(parsedStoreId);
+  async getStoreProducts(@Param('storeId', ParseIntPipe) storeId: number) {
+    return this.storeService.getStoreProducts(storeId);
   }
 
   // 주문 생성 (누구나 접근 가능 - QR 스캔용)
@@ -80,7 +76,7 @@ export class StoreController {
   @ApiBody({ type: CreateOrderDto })
   @Public()
   @Post(':storeId/orders')
-  async createOrder(@Param('storeId') storeId: string, @Body() dto: CreateOrderDto) {
+  async createOrder(@Param('storeId', ParseIntPipe) storeId: number, @Body() dto: CreateOrderDto) {
     return this.storeService.createOrder(storeId, dto);
   }
 
@@ -103,12 +99,8 @@ export class StoreController {
   @ApiBearerAuth()
   @ApiParam({ name: 'orderId', description: '주문 ID' })
   @Post('orders/:orderId/complete')
-  async completeOrder(@Request() req, @Param('orderId') orderId: string) {
+  async completeOrder(@Request() req, @Param('orderId', ParseIntPipe) orderId: number) {
     const storeId = req.user.sub;
-    const parsedOrderId = parseInt(orderId);
-    if (isNaN(parsedOrderId)) {
-      throw new BadRequestException('유효하지 않은 주문 ID입니다.');
-    }
-    return this.storeService.completeOrder(storeId, parsedOrderId);
+    return this.storeService.completeOrder(storeId, orderId);
   }
 } 

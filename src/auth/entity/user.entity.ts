@@ -1,4 +1,5 @@
 import { CoinEntity } from 'src/coin/entity/coin.entity';
+import { OrderEntity } from 'src/store/entity/order.entity';
 import { Column, Entity, OneToMany, PrimaryColumn, Index } from 'typeorm';
 
 @Entity('user')
@@ -30,4 +31,7 @@ export class UserEntity {
 
   @OneToMany(() => CoinEntity, (coin) => coin.user)
   coins: CoinEntity[];
+
+  @OneToMany(() => OrderEntity, (order) => order.user)
+  orders: OrderEntity[];
 }

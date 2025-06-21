@@ -1,4 +1,12 @@
-import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
 import { StoreEntity } from './store.entity';
 import { OrderItemEntity } from './order-item.entity';
 
@@ -22,14 +30,10 @@ export class ProductEntity {
   @Column({ default: true })
   isActive: boolean;
 
-  @Column()
-  storeId: number;
-
-  @ManyToOne(() => StoreEntity, store => store.products)
-  @JoinColumn({ name: 'storeId' })
+  @ManyToOne(() => StoreEntity, (store) => store.products, { nullable: false })
   store: StoreEntity;
 
-  @OneToMany(() => OrderItemEntity, orderItem => orderItem.product)
+  @OneToMany(() => OrderItemEntity, (orderItem) => orderItem.product)
   orderItems: OrderItemEntity[];
 
   @CreateDateColumn()
@@ -37,4 +41,4 @@ export class ProductEntity {
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+}

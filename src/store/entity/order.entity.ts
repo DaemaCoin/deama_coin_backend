@@ -1,6 +1,16 @@
-import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+} from 'typeorm';
 import { StoreEntity } from './store.entity';
 import { OrderItemEntity } from './order-item.entity';
+import { UserEntity } from 'src/auth/entity/user.entity';
 
 export enum OrderStatus {
   PENDING = 'PENDING',
@@ -13,11 +23,9 @@ export class OrderEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  userId: string; // 구매자 지갑 아이디
-
-  @Column()
-  storeId: number;
+  @ManyToOne(() => UserEntity, { nullable: false })
+  @JoinColumn({ name: 'userId' })
+  user: UserEntity;
 
   @Column('decimal', { precision: 10, scale: 2 })
   totalAmount: number;
@@ -29,11 +37,12 @@ export class OrderEntity {
   })
   status: OrderStatus;
 
-  @ManyToOne(() => StoreEntity, store => store.orders)
-  @JoinColumn({ name: 'storeId' })
+  @ManyToOne(() => StoreEntity, (store) => store.orders, { nullable: false })
   store: StoreEntity;
 
-  @OneToMany(() => OrderItemEntity, orderItem => orderItem.order, { cascade: true })
+  @OneToMany(() => OrderItemEntity, (orderItem) => orderItem.order, {
+    cascade: true,
+  })
   orderItems: OrderItemEntity[];
 
   @CreateDateColumn()
@@ -41,4 +50,4 @@ export class OrderEntity {
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+}

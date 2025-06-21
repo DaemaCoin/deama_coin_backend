@@ -20,14 +20,12 @@ export class AdminService {
     private readonly walletService: WalletService,
   ) {}
 
-  // 입점 신청 목록 조회
   async getStoreApplications(): Promise<StoreApplicationEntity[]> {
     return await this.storeApplicationRepository.find({
       order: { createdAt: 'DESC' },
     });
   }
 
-  // 입점 신청 승인/거절
   async updateStoreApplicationStatus(
     applicationId: number,
     dto: UpdateStoreApplicationStatusDto,
@@ -47,7 +45,6 @@ export class AdminService {
 
     const updatedApplication = await this.storeApplicationRepository.save(application);
 
-    // 승인된 경우 상점 계정 생성
     if (status === StoreApplicationStatus.APPROVED) {
       await this.walletService.createWallet(application.storeName, 0);
       await this.createStoreAccount(application);
@@ -56,18 +53,16 @@ export class AdminService {
     return updatedApplication;
   }
 
-  // 상점 계정 생성
   private async createStoreAccount(application: StoreApplicationEntity): Promise<StoreEntity> {
-    const storeId = application.storeName;
+    const storeName = application.storeName;
     const password = Buffer.from(application.storeName).toString('base64');
 
-    let exist = await this.storeRepository.findOne({
-      where: [{ storeId }, { phoneNumber: application.phoneNumber }],
+    const exist = await this.storeRepository.findOne({
+      where: [{ storeName }, { phoneNumber: application.phoneNumber }],
     });
     if(exist) throw new AdminException('상점이름 또는 전화번호가 이미 존재합니다.', HttpStatus.BAD_REQUEST);
 
     const store = this.storeRepository.create({
-      storeId,
       password,
       storeName: application.storeName,
       storeDescription: application.storeDescription,
@@ -78,14 +73,12 @@ export class AdminService {
     return this.storeRepository.save(store);
   }
 
-  // 상점 목록 조회
   async getStores(): Promise<StoreEntity[]> {
     return this.storeRepository.find({
       order: { createdAt: 'DESC' },
     });
   }
 
-  // 상점 활성화/비활성화
   async toggleStoreStatus(storeId: number): Promise<StoreEntity> {
     const store = await this.storeRepository.findOne({
       where: { id: storeId },
