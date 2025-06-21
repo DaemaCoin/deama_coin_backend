@@ -104,6 +104,10 @@ export class StoreService {
   async createOrder(storeId: number, dto: CreateOrderDto): Promise<OrderEntity> {
     const { userId, orderItems } = dto;
 
+    if (!orderItems?.length) {
+      throw new StoreException('주문 항목은 비어 있을 수 없습니다.', HttpStatus.BAD_REQUEST);
+    }
+
     // 1. DTO에서 주문된 모든 상품의 ID 목록을 추출합니다.
     const productIds = orderItems.map((item) => item.productId);
 
