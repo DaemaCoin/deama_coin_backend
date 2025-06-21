@@ -162,13 +162,7 @@ export class StoreService {
       throw new StoreException('상점을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
     }
 
-    // 8. `walletService`를 통해 사용자의 지갑에서 상점 지갑으로 코인을 이체합니다.
-    await this.walletService.transferAnonymous(userId, {
-      to: store.storeName,
-      amount: totalAmount,
-    });
-
-    // 9. 최종적으로 저장할 주문(Order) 엔티티를 생성합니다.
+    // 8. 먼저 주문(Order) 엔티티를 'PENDING' 상태로 생성합니다.
     //    - `orderItems` 속성에 위에서 생성한 `newOrderItems` 배열을 할당합니다.
     //    - OrderEntity의 `orderItems` 관계에 `cascade: true` 옵션이 설정되어 있어,
     //      이 Order 엔티티를 저장하면 연결된 OrderItem 엔티티들도 함께 DB에 저장됩니다.
@@ -179,9 +173,30 @@ export class StoreService {
       orderItems: newOrderItems,
     });
 
-    // 10. 주문을 데이터베이스에 저장하고, 저장된 최종 엔티티를 반환합니다.
-    //     `save` 메서드는 저장된 후의 엔티티(ID 및 관계 포함)를 반환하므로 추가적인 조회가 필요 없습니다.
-    return await this.orderRepository.save(order);
+    // 9. 주문을 데이터베이스에 먼저 기록하여, 결제 실패 시 주문 누락을 방지합니다.
+    const savedOrder = await this.orderRepository.save(order);
+
+    try {
+      // 10. `walletService`를 통해 사용자의 지갑에서 상점 지갑으로 코인을 이체합니다.
+      await this.walletService.transferAnonymous(userId, {
+        to: store.storeName,
+        amount: totalAmount,
+      });
+    } catch (error) {
+      // 11. 코인 이체가 실패하면, 주문 상태를 'CANCELLED'로 업데이트합니다.
+      savedOrder.status = OrderStatus.CANCELLED;
+      await this.orderRepository.save(savedOrder);
+
+      // 이체 실패 에러를 다시 던져서 클라이언트에게 알립니다.
+      // console.error(error); // 원본 에러 로깅이 필요하다면 주석 해제
+      throw new StoreException(
+        '결제 처리 중 오류가 발생하여 주문이 취소되었습니다.',
+        HttpStatus.PAYMENT_REQUIRED,
+      );
+    }
+
+    // 12. 모든 과정이 성공적으로 완료되면, 저장된 주문 엔티티를 반환합니다.
+    return savedOrder;
   }
 
   // 주문 목록 조회 (상점용)
