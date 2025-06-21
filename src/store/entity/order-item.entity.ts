@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
 import { OrderEntity } from './order.entity';
 import { ProductEntity } from './product.entity';
 
@@ -8,22 +8,18 @@ export class OrderItemEntity {
   id: number;
 
   @Column()
-  orderId: number;
-
-  @Column()
-  productId: number;
-
-  @Column()
   quantity: number;
 
   @Column('decimal', { precision: 10, scale: 2 })
-  price: number; // 주문 당시의 상품 가격
+  price: number; // 주문 당시 가격
 
-  @ManyToOne(() => OrderEntity, order => order.orderItems)
-  @JoinColumn({ name: 'orderId' })
+  @ManyToOne(() => OrderEntity, (order) => order.orderItems, {
+    nullable: false,
+  })
   order: OrderEntity;
 
-  @ManyToOne(() => ProductEntity, product => product.orderItems)
-  @JoinColumn({ name: 'productId' })
+  @ManyToOne(() => ProductEntity, (product) => product.orderItems, {
+    nullable: false,
+  })
   product: ProductEntity;
-} 
+}
