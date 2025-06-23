@@ -60,15 +60,29 @@ export class AuthService {
     const getReposPromises = [1, 2, 3, 4].map((page) =>
       this.githubService.getUserRepo(githubAccessToken, page),
     );
-    const getReposResults = await Promise.all(getReposPromises);
+    const getReposResultsSettled = await Promise.allSettled(getReposPromises);
+    const getReposResults = getReposResultsSettled
+      .filter((result) => {
+        if (result.status === 'rejected') {
+          console.error('Repo fetch 실패:', result.reason);
+          return false;
+        }
+        return true;
+      })
+      .map((result) => (result.status === 'fulfilled' ? result.value : []));
     const allRepos = getReposResults.flat();
 
     const writableRepos = allRepos.filter((repo) => repo.permissions.push);
-    await Promise.all(
+    const hookResults = await Promise.allSettled(
       writableRepos.map((repoInfo: GithubRepoI) =>
         this.githubService.createGitHook(githubAccessToken, repoInfo.full_name),
       ),
     );
+    hookResults.forEach((result, idx) => {
+      if (result.status === 'rejected') {
+        console.error(`웹훅 생성 실패: ${writableRepos[idx].full_name}`, result.reason);
+      }
+    });
 
     return githubUserId;
   }
