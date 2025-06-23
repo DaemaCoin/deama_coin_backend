@@ -89,7 +89,7 @@ export class StoreService {
       throw new StoreException('잘못된 로그인 정보입니다.', HttpStatus.BAD_REQUEST);
     }
 
-    const accessToken = this.jwtService.sign(
+    const accessToken = await this.jwtService.signAsync(
       { storeName: store.storeName },
       { secret: this.jwtSecret },
     );
