@@ -74,6 +74,7 @@ export class LeaderboardService implements OnModuleInit {
   ): Promise<LeaderboardResponseDto> {
     const cached = await this.redisService.getJson<LeaderboardItemDto[]>(this.LEADERBOARD_CACHE_KEY);
     if (!cached) {
+      this.cacheWalletLeaderboard();
       throw new LeaderBoardNotCachedException();
     }
 
