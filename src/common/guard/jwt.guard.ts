@@ -32,7 +32,7 @@ export class JwtGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
 
-    const isPublic = await this.reflector.get(IsPublic, context.getHandler());
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IsPublic, [context.getHandler(), context.getClass()]);
     const isRefresh = this.reflector.get(IsRefresh, context.getHandler());
 
     if (isPublic) {
