@@ -3,11 +3,11 @@ import { ApiTags, ApiOperation, ApiResponse, ApiSecurity, ApiParam, ApiBody } fr
 import { AdminService } from './admin.service';
 import { UpdateStoreApplicationStatusDto } from '../store/dto/store-application.dto';
 import { ApiKeyGuard } from '../common/guard/api-key.guard';
-import { Public } from '../common/decorator/public.decorator';
+import { IsPublic } from 'src/common/decorator/is-public';
 
 @ApiTags('admin')
 @ApiSecurity('api-key')
-@Public()
+@IsPublic()
 @UseGuards(ApiKeyGuard)
 @Controller('admin')
 export class AdminController {

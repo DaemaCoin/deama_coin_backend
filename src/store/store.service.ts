@@ -17,9 +17,13 @@ import { CreateOrderDto } from './dto/order.dto';
 import { WalletService } from '../wallet/wallet.service';
 import { StoreException } from 'src/exception/custom-exception/store.exception';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { ConfigService } from '@nestjs/config';
+import { EnvKeys } from 'src/common/env.keys';
 
 @Injectable()
 export class StoreService {
+  jwtSecret: string
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
@@ -35,7 +39,10 @@ export class StoreService {
     private readonly orderItemRepository: Repository<OrderItemEntity>,
     private readonly jwtService: JwtService,
     private readonly walletService: WalletService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.jwtSecret = configService.get(EnvKeys.JWT_SECRET);
+  }
 
   async applyStore(dto: CreateStoreApplicationDto): Promise<StoreApplicationEntity> {
     const phoneNumber = dto.phoneNumber.replace(/-/g, '');
@@ -82,8 +89,10 @@ export class StoreService {
       throw new StoreException('잘못된 로그인 정보입니다.', HttpStatus.BAD_REQUEST);
     }
 
-    const payload = { storeId: store.storeName, sub: store.id };
-    const accessToken = this.jwtService.sign(payload);
+    const accessToken = this.jwtService.sign(
+      { storeName: store.storeName },
+      { secret: this.jwtSecret },
+    );
 
     return { accessToken };
   }
