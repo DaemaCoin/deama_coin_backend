@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsPhoneNumber, IsEnum, ValidateIf } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, ValidateIf, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { StoreApplicationStatus } from '../entity/store-application.entity';
 
@@ -21,6 +21,9 @@ export class CreateStoreApplicationDto {
   @ApiProperty({ description: '전화번호', example: '010-1234-5678' })
   @IsString()
   @IsNotEmpty()
+  @Matches(/^010(-\d{4}-\d{4}|\d{8})$/, {
+    message: '전화번호 형식이 올바르지 않습니다. (허용 형식: 010-1234-5678 또는 01012345678)',
+  })
   phoneNumber: string;
 }
 

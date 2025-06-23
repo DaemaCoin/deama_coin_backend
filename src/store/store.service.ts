@@ -35,8 +35,10 @@ export class StoreService {
   ) {}
 
   async applyStore(dto: CreateStoreApplicationDto): Promise<StoreApplicationEntity> {
+    const phoneNumber = dto.phoneNumber.replace(/-/g, '');
+
     let existing = await this.storeApplicationRepository.findOne({
-      where: { phoneNumber: dto.phoneNumber },
+      where: { phoneNumber },
     });
 
     if (existing) {
@@ -47,6 +49,7 @@ export class StoreService {
         existing = {
           ...existing,
           ...dto,
+          phoneNumber,
           status: StoreApplicationStatus.PENDING,
           rejectionReason: null,
         };
@@ -60,7 +63,10 @@ export class StoreService {
       throw new StoreException('한 개의 전화번호는 한 개의 상점만 열 수 있습니다.', HttpStatus.BAD_REQUEST);
     }
 
-    const application = this.storeApplicationRepository.create(dto);
+    const application = this.storeApplicationRepository.create({
+      ...dto,
+      phoneNumber,
+    });
     return this.storeApplicationRepository.save(application);
   }
 
