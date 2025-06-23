@@ -1,5 +1,23 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request, BadRequestException, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  ParseIntPipe,
+  Delete,
+  Patch,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 import { StoreService } from './store.service';
 import { CreateStoreApplicationDto } from './dto/store-application.dto';
 import { StoreLoginDto } from './dto/store-login.dto';
@@ -19,7 +37,7 @@ export class StoreController {
   @ApiResponse({ status: 400, description: '이미 대기 중인 신청이 있음' })
   @ApiBody({ type: CreateStoreApplicationDto })
   @IsPublic()
-  @Post('apply')
+  @Post('/apply')
   async applyStore(@Body() dto: CreateStoreApplicationDto) {
     return this.storeService.applyStore(dto);
   }
@@ -30,7 +48,7 @@ export class StoreController {
   @ApiResponse({ status: 400, description: '잘못된 로그인 정보' })
   @ApiBody({ type: StoreLoginDto })
   @IsPublic()
-  @Post('login')
+  @Post('/login')
   async login(@Body() dto: StoreLoginDto) {
     return this.storeService.login(dto);
   }
@@ -41,8 +59,11 @@ export class StoreController {
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiBearerAuth()
   @ApiBody({ type: CreateProductDto })
-  @Post('products')
-  async createProduct(@GetStoreId() storeId: number, @Body() dto: CreateProductDto) {
+  @Post('/products')
+  async createProduct(
+    @GetStoreId() storeId: number,
+    @Body() dto: CreateProductDto,
+  ) {
     return this.storeService.createProduct(storeId, dto);
   }
 
@@ -51,7 +72,7 @@ export class StoreController {
   @ApiResponse({ status: 200, description: '상품 목록 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiBearerAuth()
-  @Get('my-products')
+  @Get('/product/my')
   async getMyProducts(@GetStoreId() storeId: number) {
     return this.storeService.getMyProducts(storeId);
   }
@@ -61,9 +82,36 @@ export class StoreController {
   @ApiResponse({ status: 200, description: '상품 목록 조회 성공' })
   @ApiParam({ name: 'storeId', description: '상점 ID' })
   @IsPublic()
-  @Get(':storeId/products')
+  @Get('/:storeId/products')
   async getStoreProducts(@Param('storeId', ParseIntPipe) storeId: number) {
     return this.storeService.getStoreProducts(storeId);
+  }
+
+  // 상품 활성화/비활성화
+  @ApiOperation({ summary: '상품 활성화/비활성화' })
+  @ApiResponse({ status: 200, description: '상품 상태 변경 성공' })
+  @ApiResponse({ status: 404, description: '상품을 찾을 수 없음' })
+  @ApiBearerAuth()
+  @Patch('/products/:productId/toggle-status')
+  async toggleProductStatus(
+    @GetStoreId() storeId: number,
+    @Param('productId', ParseIntPipe) productId: number,
+  ) {
+    return await this.storeService.toggleProductStatus(storeId, productId);
+  }
+
+  // 상품 삭제
+  @ApiOperation({ summary: '상품 삭제' })
+  @ApiResponse({ status: 204, description: '상품 삭제 성공' })
+  @ApiResponse({ status: 404, description: '상품을 찾을 수 없음' })
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete('/products/:productId')
+  async deleteProduct(
+    @GetStoreId() storeId: number,
+    @Param('productId', ParseIntPipe) productId: number,
+  ) {
+    await this.storeService.deleteProduct(storeId, productId);
   }
 
   // 주문 생성 (누구나 접근 가능 - QR 스캔용)
@@ -73,8 +121,11 @@ export class StoreController {
   @ApiParam({ name: 'storeId', description: '상점 ID' })
   @ApiBody({ type: CreateOrderDto })
   @IsPublic()
-  @Post(':storeId/orders')
-  async createOrder(@Param('storeId', ParseIntPipe) storeId: number, @Body() dto: CreateOrderDto) {
+  @Post('/:storeId/orders')
+  async createOrder(
+    @Param('storeId', ParseIntPipe) storeId: number,
+    @Body() dto: CreateOrderDto,
+  ) {
     return this.storeService.createOrder(storeId, dto);
   }
 
@@ -83,7 +134,7 @@ export class StoreController {
   @ApiResponse({ status: 200, description: '주문 목록 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiBearerAuth()
-  @Get('my-orders')
+  @Get('/orders/my')
   async getMyOrders(@GetStoreId() storeId: number) {
     return this.storeService.getMyOrders(storeId);
   }
@@ -96,7 +147,10 @@ export class StoreController {
   @ApiBearerAuth()
   @ApiParam({ name: 'orderId', description: '주문 ID' })
   @Post('orders/:orderId/complete')
-  async completeOrder(@GetStoreId() storeId: number, @Param('orderId', ParseIntPipe) orderId: number) {
+  async completeOrder(
+    @GetStoreId() storeId: number,
+    @Param('orderId', ParseIntPipe) orderId: number,
+  ) {
     return this.storeService.completeOrder(storeId, orderId);
   }
-} 
+}

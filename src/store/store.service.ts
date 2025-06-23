@@ -119,6 +119,21 @@ export class StoreService {
     });
   }
 
+  // 상품 활성화/비활성화
+  async toggleProductStatus(storeId: number, productId: number): Promise<ProductEntity> {
+    const product = await this.productRepository.findOne({ where: { id: productId, store: { id: storeId } } });
+    if (!product) {
+      throw new StoreException('상품을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
+    }
+    product.isActive = !product.isActive;
+    return await this.productRepository.save(product);
+  }
+
+  // 상품 삭제(soft delete)
+  async deleteProduct(storeId: number, productId: number): Promise<void> {
+    await this.productRepository.delete({id: productId, store: {id: storeId}})
+  }
+
   async createOrder(storeId: number, dto: CreateOrderDto): Promise<OrderEntity> {
     const { userId, orderItems } = dto;
 
