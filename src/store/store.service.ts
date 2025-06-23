@@ -16,10 +16,13 @@ import { CreateProductDto } from './dto/product.dto';
 import { CreateOrderDto } from './dto/order.dto';
 import { WalletService } from '../wallet/wallet.service';
 import { StoreException } from 'src/exception/custom-exception/store.exception';
+import { UserEntity } from 'src/auth/entity/user.entity';
 
 @Injectable()
 export class StoreService {
   constructor(
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(StoreApplicationEntity)
     private readonly storeApplicationRepository: Repository<StoreApplicationEntity>,
     @InjectRepository(StoreEntity)
@@ -157,7 +160,8 @@ export class StoreService {
     });
 
     // 6. 사용자의 지갑 정보를 조회하여 잔액을 확인합니다.
-    const walletInfo = await this.walletService.getWallet(userId);
+    const user = await this.userRepository.findOne({ where: { githubId: userId } });
+    const walletInfo = await this.walletService.getWallet(user.id);
 
     if (walletInfo.balance < totalAmount) {
       throw new StoreException('잔액이 부족합니다.', HttpStatus.BAD_REQUEST);
