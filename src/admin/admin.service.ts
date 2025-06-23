@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import {
   StoreApplicationEntity,
   StoreApplicationStatus,
@@ -18,6 +18,7 @@ export class AdminService {
     @InjectRepository(StoreEntity)
     private storeRepository: Repository<StoreEntity>,
     private readonly walletService: WalletService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async getStoreApplications(): Promise<StoreApplicationEntity[]> {
@@ -30,39 +31,50 @@ export class AdminService {
     applicationId: number,
     dto: UpdateStoreApplicationStatusDto,
   ): Promise<StoreApplicationEntity> {
-    const application = await this.storeApplicationRepository.findOne({
-      where: { id: applicationId, status: StoreApplicationStatus.PENDING },
-    });
-
-    if (!application) {
-      throw new AdminException('신청을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const application = await queryRunner.manager.findOne(StoreApplicationEntity, {
+        where: { id: applicationId, status: StoreApplicationStatus.PENDING },
+      });
+      if (!application) {
+        throw new AdminException('신청을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
+      }
+      const { status, rejectionReason } = dto;
+      if (status === StoreApplicationStatus.APPROVED) {
+        // 외부(지갑) 생성이 실패하면 롤백
+        try {
+          await this.walletService.createWallet(application.storeName, 0);
+        } catch (e) {
+          throw new AdminException('지갑 생성 실패: ' + e.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        // 상점 계정 생성 (DB 트랜잭션)
+        await this.createStoreAccountWithManager(application, queryRunner.manager);
+      }
+      application.status = status;
+      application.rejectionReason = status === StoreApplicationStatus.REJECTED ? rejectionReason : null;
+      const updatedApplication = await queryRunner.manager.save(application);
+      await queryRunner.commitTransaction();
+      return updatedApplication;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
     }
-
-    const { status, rejectionReason } = dto;
-
-    application.status = status;
-    application.rejectionReason = status === StoreApplicationStatus.REJECTED ? rejectionReason : null;
-
-    const updatedApplication = await this.storeApplicationRepository.save(application);
-
-    if (status === StoreApplicationStatus.APPROVED) {
-      await this.walletService.createWallet(application.storeName, 0);
-      await this.createStoreAccount(application);
-    }
-
-    return updatedApplication;
   }
 
-  private async createStoreAccount(application: StoreApplicationEntity): Promise<StoreEntity> {
+  private async createStoreAccountWithManager(application: StoreApplicationEntity, manager: any): Promise<StoreEntity> {
     const storeName = application.storeName;
     const password = Buffer.from(application.storeName).toString('base64');
 
-    const exist = await this.storeRepository.findOne({
+    const exist = await manager.findOne(StoreEntity, {
       where: [{ storeName }, { phoneNumber: application.phoneNumber }],
     });
     if(exist) throw new AdminException('상점이름 또는 전화번호가 이미 존재합니다.', HttpStatus.BAD_REQUEST);
 
-    const store = this.storeRepository.create({
+    const store = manager.create(StoreEntity, {
       password,
       storeName: application.storeName,
       storeDescription: application.storeDescription,
@@ -70,7 +82,7 @@ export class AdminService {
       phoneNumber: application.phoneNumber,
     });
 
-    return this.storeRepository.save(store);
+    return manager.save(StoreEntity, store);
   }
 
   async getStores(): Promise<StoreEntity[]> {
