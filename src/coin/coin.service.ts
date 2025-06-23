@@ -183,6 +183,7 @@ export class CoinService {
         .select('SUM(coin.amount)', 'totalAmount')
         .where('coin.userId = :userId', { userId })
         .andWhere('coin.createdAt BETWEEN :start AND :end', { start, end })
+        .andWhere('coin.amount BETWEEN :minAmount AND :maxAmount', { minAmount: 0, maxAmount: 5 })
         .getRawOne();
 
       return Number(todayCoins?.totalAmount || 0);
