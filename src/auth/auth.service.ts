@@ -17,6 +17,7 @@ import { GithubHookI } from 'src/common/interface/git-hook.interface';
 import { WithdrawRequest } from './dto/request/withdraw.request';
 import { CoinEntity, CoinType } from 'src/coin/entity/coin.entity';
 import { Not } from 'typeorm';
+import { RedisUtilService } from 'src/util-module/redis/redis-util.service';
 
 @Injectable()
 export class AuthService {
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly githubService: GithubService,
     private readonly xquareService: XquareService,
     private readonly walletService: WalletService,
+    private readonly redisService: RedisUtilService,
   ) {}
 
   async generateTokens(userId: string) {
@@ -206,5 +208,6 @@ export class AuthService {
 
     await this.coinRepository.delete({ user: { id: userId } });
     await this.userRepository.delete({ id: userId });
+    await this.redisService.deleteByPattern(`*${userId}:*`);
   }
 }

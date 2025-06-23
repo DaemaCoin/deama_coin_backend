@@ -7,12 +7,14 @@ import { XquareService } from './xquare.service';
 import { WalletModule } from 'src/wallet/wallet.module';
 import { GithubModule } from 'src/github/github.module';
 import { CoinEntity } from 'src/coin/entity/coin.entity';
+import { RedisUtilModule } from 'src/util-module/redis/redis-util.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserEntity, CoinEntity]),
     WalletModule,
     GithubModule,
+    RedisUtilModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, XquareService],
