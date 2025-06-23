@@ -6,32 +6,36 @@ import { EnvKeys } from '../env.keys';
 import { IsRefresh } from '../decorator/is-refresh';
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { IsPublic } from '../decorator/is-public';
-import { IS_PUBLIC_KEY } from '../decorator/public.decorator';
 import { Repository } from 'typeorm';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { StoreEntity } from 'src/store/entity/store.entity';
 
 @Injectable()
 export class JwtGuard implements CanActivate {
+  jwtSecret: string;
+  jwtSecretRe: string;
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(StoreEntity)
+    private readonly storeEntity: Repository<StoreEntity>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private reflector: Reflector,
-  ) {}
+  ) {
+    this.jwtSecret = this.configService.get(EnvKeys.JWT_SECRET);
+    this.jwtSecretRe = this.configService.get(EnvKeys.JWT_SECRET_RE);
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
 
     const isPublic = await this.reflector.get(IsPublic, context.getHandler());
-    const isPublicNew = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
     const isRefresh = this.reflector.get(IsRefresh, context.getHandler());
 
-    if (isPublic || isPublicNew) {
+    if (isPublic) {
       return true;
     }
 
@@ -44,7 +48,7 @@ export class JwtGuard implements CanActivate {
 
       if (isRefresh) {
         const { userId } = await this.jwtService.verifyAsync(token, {
-          secret: this.configService.get(EnvKeys.JWT_SECRET_RE),
+          secret: this.jwtSecretRe,
         });
 
         const user = await this.userRepository.findOne({
@@ -53,18 +57,22 @@ export class JwtGuard implements CanActivate {
         if (!user) throw new InvalidTokenFormatException();
         req.user = userId;
       } else {
-        const payload = await this.jwtService.verifyAsync(token, {
-          secret: this.configService.get(EnvKeys.JWT_SECRET),
+        const { userId, storeName } = await this.jwtService.verifyAsync(token, {
+          secret: this.jwtSecret
         });
 
-        if (payload.userId) {
+        if (userId) {
           const user = await this.userRepository.findOne({
-            where: { id: payload.userId },
+            where: { id: userId },
           });
           if (!user) throw new InvalidTokenFormatException();
-          req.user = payload.userId;
-        } else if (payload.storeId) {
-          req.user = payload;
+          req.user = userId;
+        } else if (storeName) {
+          const store = await this.storeEntity.findOne({
+            where: { storeName: storeName },
+          });
+          if (!store) throw new InvalidTokenFormatException();
+          req.store = store.id;
         } else {
           throw new InvalidTokenFormatException();
         }
