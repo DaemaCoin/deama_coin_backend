@@ -72,7 +72,7 @@ export class StoreController {
   @ApiResponse({ status: 200, description: '상품 목록 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiBearerAuth()
-  @Get('/product/my')
+  @Get('/my-products')
   async getMyProducts(@GetStoreId() storeId: number) {
     return this.storeService.getMyProducts(storeId);
   }
