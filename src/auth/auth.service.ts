@@ -15,7 +15,7 @@ import { GithubService } from 'src/github/github.service';
 import { GithubRepoI } from 'src/common/interface/git-repo.interface';
 import { GithubHookI } from 'src/common/interface/git-hook.interface';
 import { WithdrawRequest } from './dto/request/withdraw.request';
-import { CoinEntity } from 'src/coin/entity/coin.entity';
+import { CoinEntity, CoinType } from 'src/coin/entity/coin.entity';
 import { Not } from 'typeorm';
 
 @Injectable()
@@ -129,6 +129,7 @@ export class AuthService {
         repoName: 'Start',
         user: { id: xquareId },
         amount: INIT_BALENCE,
+        type: CoinType.INIT
       });
 
       return await this.generateTokens(xquareId);

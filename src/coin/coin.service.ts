@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CoinEntity } from './entity/coin.entity';
+import { CoinEntity, CoinType } from './entity/coin.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { GithubService } from 'src/github/github.service';
 import { GeminiUtilService } from 'src/util-module/gemini/gemini.service';
@@ -70,6 +70,7 @@ export class CoinService {
         amount: actualCoinAmount,
         message: commitData.commit.message,
         repoName: fullName,
+        type: CoinType.MINING,
         user: { id: user.id },
       });
   
@@ -183,7 +184,7 @@ export class CoinService {
         .select('SUM(coin.amount)', 'totalAmount')
         .where('coin.userId = :userId', { userId })
         .andWhere('coin.createdAt BETWEEN :start AND :end', { start, end })
-        .andWhere('coin.amount BETWEEN :minAmount AND :maxAmount', { minAmount: 0, maxAmount: 5 })
+        .andWhere('coin.type = :type', { type: CoinType.MINING })
         .getRawOne();
 
       return Number(todayCoins?.totalAmount || 0);
@@ -212,6 +213,7 @@ export class CoinService {
           amount: -amount, // 송금은 음수로 기록
           message: `${toUserId}에게 ${amount} 코인 이체`,
           repoName: 'Transfer',
+          type: CoinType.TRANSFER,
           user: { id: fromUserId },
         });
 
@@ -221,6 +223,7 @@ export class CoinService {
           amount: amount, // 수신은 양수로 기록
           message: `${fromUserId}로부터 ${amount} 코인 수신`,
           repoName: 'Transfer',
+          type: CoinType.TRANSFER,
           user: { id: toUserId },
         });
 

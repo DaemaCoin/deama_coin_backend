@@ -8,6 +8,12 @@ import {
   Index,
 } from 'typeorm';
 
+export enum CoinType {
+  INIT = 'INIT',
+  MINING = 'MINING',
+  TRANSFER = 'TRANSFER',
+}
+
 @Entity('coin')
 @Index(['user', 'createdAt'])
 @Index(['createdAt'])
@@ -15,18 +21,21 @@ export class CoinEntity {
   @PrimaryColumn()
   id: string;
 
-  @Column()
+  @Column({ nullable: false })
   amount: number;
 
-  @Column()
+  @Column({ nullable: false })
   message: string;
 
-  @Column()
+  @Column({ nullable: false })
   repoName: string;
+
+  @Column({ type: 'enum', enum: CoinType, nullable: false })
+  type: CoinType;
 
   @ManyToOne(() => UserEntity, (user) => user.coins)
   user: UserEntity;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ nullable: false })
   createdAt: Date;
 }
