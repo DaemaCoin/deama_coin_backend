@@ -13,6 +13,7 @@ import { IsPublic } from '../common/decorator/is-public';
 import { RegisterRequest } from './dto/request/register.request';
 import { GetUserId } from 'src/common/decorator/get-user-id';
 import { WithdrawRequest } from './dto/request/withdraw.request';
+import { UsersResponseDto } from './dto/response/users.response';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -58,7 +59,11 @@ export class AuthController {
     summary: '본인을 제외한 나머지 유저들 조회',
     description: '본인을 제외한 모든 유저들을 페이지 단위로 조회합니다. (페이지당 20명)'
   })
-  @ApiResponse({ status: 200, description: '유저 목록 조회 성공' })
+  @ApiResponse({ 
+    status: 200, 
+    description: '유저 목록 조회 성공',
+    type: UsersResponseDto
+  })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @ApiQuery({
     name: 'page',
