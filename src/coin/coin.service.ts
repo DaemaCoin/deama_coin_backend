@@ -8,7 +8,7 @@ import { GeminiUtilService } from 'src/util-module/gemini/gemini.service';
 import { WalletService } from 'src/wallet/wallet.service';
 import { RedisUtilService } from 'src/util-module/redis/redis-util.service';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
-import { formattedDate, generateToday, getTodayStartEnd } from 'src/common/util/date-fn';
+import { formattedDate, generateToday, getTodayUtcRange } from 'src/common/util/date-fn';
 import { AlreadyCoinExistException } from 'src/exception/custom-exception/already-coin-exist.exception';
 import { InsufficientBalanceException } from 'src/exception/custom-exception/insufficient-balance.exception';
 import { TransferRequest } from 'src/common/util/transfer.request.dto';
@@ -17,7 +17,6 @@ import { TransferRequest } from 'src/common/util/transfer.request.dto';
 export class CoinService {
   private readonly CACHE_TTL = 3600;
   private readonly CACHE_PREFIX = 'coin_history:';
-  private readonly TODAY_MINED_CACHE_PREFIX = 'today_mined_coins:';
   private readonly MAX_COIN_AMOUNT = 20;
   private readonly PAGE_SIZE = 20;
 
@@ -79,9 +78,6 @@ export class CoinService {
       try {
         const cachePattern = `${this.CACHE_PREFIX}${user.id}:*`;
         await this.redisService.deleteByPattern(cachePattern);
-
-        const todayMinedCacheKey = `${this.TODAY_MINED_CACHE_PREFIX}${user.id}:${today}`;
-        await this.redisService.delete(todayMinedCacheKey);
       } catch (error) {
         console.error(`캐시 삭제 실패 (userId: ${user.id}): ${error.message}`);
         // 캐시 삭제 실패는 치명적이지 않으므로 로그만 기록하고 계속 진행
@@ -156,25 +152,9 @@ export class CoinService {
   }
 
   async getTodayMinedCoins(userId: string) {
-    const { start, end } = getTodayStartEnd();
-    const today = generateToday();
-    const cacheKey = `${this.TODAY_MINED_CACHE_PREFIX}${userId}:${today}`;
-
-    try {
-      const cached = await this.redisService.getJson<{ totalAmount: number }>(cacheKey);
-      if (cached) return cached;
-
-      const totalAmount = await this._getTodayCoinsFromDB(userId, start, end);
-      const result = { totalAmount };
-
-      await this.redisService.setJson(cacheKey, result, this.CACHE_TTL);
-      return result;
-    } catch (error) {
-      console.error(`오늘 채굴된 코인 개수 조회 실패 (userId: ${userId}): ${error.message}`);
-      // 캐시 실패 시에도 DB에서 데이터는 반환
-      const totalAmount = await this._getTodayCoinsFromDB(userId, start, end);
-      return { totalAmount };
-    }
+    const { utcStart, utcEnd } = getTodayUtcRange();
+    const totalAmount = await this._getTodayCoinsFromDB(userId, utcStart, utcEnd);
+    return { totalAmount };
   }
 
   private async _getTodayCoinsFromDB(userId: string, start: Date, end: Date): Promise<number> {
