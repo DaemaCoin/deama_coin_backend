@@ -7,6 +7,11 @@ export const generateToday = () => {
   return formattedDate;
 };
 
+export const getCurrentKoreanTime = () => {
+  const timeZone = 'Asia/Seoul';
+  return new Date(formatInTimeZone(new Date(), timeZone, 'yyyy-MM-dd HH:mm:ss'));
+};
+
 export const formattedDate = (date: Date, format: string) => {
   const timeZone = 'Asia/Seoul';
   if(!date) return null;

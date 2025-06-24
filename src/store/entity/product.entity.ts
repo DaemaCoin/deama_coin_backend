@@ -36,7 +36,7 @@ export class ProductEntity {
   @OneToMany(() => OrderItemEntity, (orderItem) => orderItem.product)
   orderItems: OrderItemEntity[];
 
-  @CreateDateColumn()
+  @Column({ nullable: false })
   createdAt: Date;
 
   @UpdateDateColumn()

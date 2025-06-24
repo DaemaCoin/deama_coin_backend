@@ -39,7 +39,7 @@ export class StoreApplicationEntity {
   @Column({ type: 'text', nullable: true })
   rejectionReason: string | null;
 
-  @CreateDateColumn()
+  @Column({ nullable: false })
   createdAt: Date;
 
   @UpdateDateColumn()

@@ -9,6 +9,7 @@ import { StoreEntity } from '../store/entity/store.entity';
 import { UpdateStoreApplicationStatusDto } from '../store/dto/store-application.dto';
 import { WalletService } from 'src/wallet/wallet.service';
 import { AdminException } from 'src/exception/custom-exception/admin.exception';
+import { getCurrentKoreanTime } from 'src/common/util/date-fn';
 
 @Injectable()
 export class AdminService {
@@ -80,6 +81,7 @@ export class AdminService {
       storeDescription: application.storeDescription,
       storeImage: application.storeImage,
       phoneNumber: application.phoneNumber,
+      createdAt: getCurrentKoreanTime(),
     });
 
     return manager.save(StoreEntity, store);

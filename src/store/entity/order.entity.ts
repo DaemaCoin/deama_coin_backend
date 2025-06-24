@@ -45,7 +45,7 @@ export class OrderEntity {
   })
   orderItems: OrderItemEntity[];
 
-  @CreateDateColumn()
+  @Column({ nullable: false })
   createdAt: Date;
 
   @UpdateDateColumn()

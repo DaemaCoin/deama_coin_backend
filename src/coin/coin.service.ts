@@ -8,7 +8,7 @@ import { GeminiUtilService } from 'src/util-module/gemini/gemini.service';
 import { WalletService } from 'src/wallet/wallet.service';
 import { RedisUtilService } from 'src/util-module/redis/redis-util.service';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
-import { formattedDate, generateToday, getTodayStartEnd } from 'src/common/util/date-fn';
+import { formattedDate, generateToday, getCurrentKoreanTime, getTodayStartEnd } from 'src/common/util/date-fn';
 import { AlreadyCoinExistException } from 'src/exception/custom-exception/already-coin-exist.exception';
 import { InsufficientBalanceException } from 'src/exception/custom-exception/insufficient-balance.exception';
 import { TransferRequest } from 'src/common/util/transfer.request.dto';
@@ -71,6 +71,7 @@ export class CoinService {
         message: commitData.commit.message,
         repoName: fullName,
         type: CoinType.MINING,
+        createdAt: getCurrentKoreanTime(),
         user: { id: user.id },
       });
   
@@ -214,6 +215,7 @@ export class CoinService {
           message: `${toUserId}에게 ${amount} 코인 이체`,
           repoName: 'Transfer',
           type: CoinType.TRANSFER,
+          createdAt: getCurrentKoreanTime(),
           user: { id: fromUserId },
         });
 
@@ -224,6 +226,7 @@ export class CoinService {
           message: `${fromUserId}로부터 ${amount} 코인 수신`,
           repoName: 'Transfer',
           type: CoinType.TRANSFER,
+          createdAt: getCurrentKoreanTime(),
           user: { id: toUserId },
         });
 

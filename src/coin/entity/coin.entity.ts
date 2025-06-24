@@ -36,6 +36,6 @@ export class CoinEntity {
   @ManyToOne(() => UserEntity, (user) => user.coins)
   user: UserEntity;
 
-  @CreateDateColumn({ nullable: false })
+  @Column({ nullable: false })
   createdAt: Date;
 }
