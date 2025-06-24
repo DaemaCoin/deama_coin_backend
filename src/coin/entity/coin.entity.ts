@@ -1,13 +1,12 @@
-import { toZonedTime } from 'date-fns-tz';
 import { UserEntity } from 'src/auth/entity/user.entity';
-import { getCurrentKoreanTime } from 'src/common/util/date-fn';
+import { EntityDateTransformer } from 'src/common/util/entity-date-transformer';
 import {
   Column,
   Entity,
   ManyToOne,
   PrimaryColumn,
   Index,
-  BeforeInsert,
+  CreateDateColumn,
 } from 'typeorm';
 
 export enum CoinType {
@@ -38,11 +37,6 @@ export class CoinEntity {
   @ManyToOne(() => UserEntity, (user) => user.coins)
   user: UserEntity;
 
-  @Column({ nullable: false })
+  @CreateDateColumn({ type: 'timestamp', transformer: EntityDateTransformer })
   createdAt: Date;
-
-  @BeforeInsert()
-  setCreatedAt() {
-    this.createdAt = getCurrentKoreanTime();
-  }
 }
