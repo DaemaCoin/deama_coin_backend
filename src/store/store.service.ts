@@ -19,7 +19,6 @@ import { StoreException } from 'src/exception/custom-exception/store.exception';
 import { UserEntity } from 'src/auth/entity/user.entity';
 import { ConfigService } from '@nestjs/config';
 import { EnvKeys } from 'src/common/env.keys';
-import { getCurrentKoreanTime } from 'src/common/util/date-fn';
 
 @Injectable()
 export class StoreService {
@@ -77,7 +76,6 @@ export class StoreService {
     const application = this.storeApplicationRepository.create({
       ...dto,
       phoneNumber,
-      createdAt: getCurrentKoreanTime(),
     });
     return this.storeApplicationRepository.save(application);
   }
@@ -103,7 +101,6 @@ export class StoreService {
     const product = this.productRepository.create({
       ...dto,
       store: { id: storeId },
-      createdAt: getCurrentKoreanTime(),
     });
     return await this.productRepository.save(product);
   }
@@ -212,7 +209,6 @@ export class StoreService {
       store: { id: storeId },
       totalAmount,
       orderItems: newOrderItems,
-      createdAt: getCurrentKoreanTime()
     });
 
     // 9. 주문을 데이터베이스에 먼저 기록하여, 결제 실패 시 주문 누락을 방지합니다.

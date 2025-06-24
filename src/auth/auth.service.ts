@@ -18,7 +18,6 @@ import { WithdrawRequest } from './dto/request/withdraw.request';
 import { CoinEntity, CoinType } from 'src/coin/entity/coin.entity';
 import { Not } from 'typeorm';
 import { RedisUtilService } from 'src/util-module/redis/redis-util.service';
-import { getCurrentKoreanTime } from 'src/common/util/date-fn';
 
 @Injectable()
 export class AuthService {
@@ -133,7 +132,6 @@ export class AuthService {
         user: { id: xquareId },
         amount: INIT_BALENCE,
         type: CoinType.INIT,
-        createdAt: getCurrentKoreanTime(),
       });
 
       return await this.generateTokens(xquareId);
