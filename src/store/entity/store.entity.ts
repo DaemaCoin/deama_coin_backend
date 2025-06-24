@@ -5,11 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
-  BeforeInsert,
 } from 'typeorm';
 import { ProductEntity } from './product.entity';
 import { OrderEntity } from './order.entity';
-import { getCurrentKoreanTime } from 'src/common/util/date-fn';
+import { EntityDateTransformer } from 'src/common/util/entity-date-transformer';
 
 @Entity('store')
 export class StoreEntity {
@@ -40,14 +39,9 @@ export class StoreEntity {
   @OneToMany(() => OrderEntity, (order) => order.store)
   orders: OrderEntity[];
 
-  @Column({ nullable: false })
+  @CreateDateColumn({ type: 'timestamp', transformer: EntityDateTransformer })
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  @BeforeInsert()
-  setCreatedAt() {
-    this.createdAt = getCurrentKoreanTime();
-  }
 }

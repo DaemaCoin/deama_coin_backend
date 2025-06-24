@@ -1,11 +1,10 @@
-import { getCurrentKoreanTime } from 'src/common/util/date-fn';
+import { EntityDateTransformer } from 'src/common/util/entity-date-transformer';
 import {
   Column,
   Entity,
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  BeforeInsert,
 } from 'typeorm';
 
 export enum StoreApplicationStatus {
@@ -41,14 +40,9 @@ export class StoreApplicationEntity {
   @Column({ type: 'text', nullable: true })
   rejectionReason: string | null;
 
-  @Column({ nullable: false })
+  @CreateDateColumn({ type: 'timestamp', transformer: EntityDateTransformer })
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  @BeforeInsert()
-  setCreatedAt() {
-    this.createdAt = getCurrentKoreanTime();
-  }
 }

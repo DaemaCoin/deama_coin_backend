@@ -28,5 +28,6 @@ export const typeOrmModule = TypeOrmModule.forRootAsync({
       OrderItemEntity,
     ],
     synchronize: true,
+    timezone: '+00:00',
   }),
 });
