@@ -22,7 +22,7 @@ import { EnvKeys } from 'src/common/env.keys';
 
 @Injectable()
 export class StoreService {
-  jwtSecret: string
+  jwtSecret: string;
 
   constructor(
     @InjectRepository(UserEntity)
@@ -44,7 +44,9 @@ export class StoreService {
     this.jwtSecret = configService.get(EnvKeys.JWT_SECRET);
   }
 
-  async applyStore(dto: CreateStoreApplicationDto): Promise<StoreApplicationEntity> {
+  async applyStore(
+    dto: CreateStoreApplicationDto,
+  ): Promise<StoreApplicationEntity> {
     const phoneNumber = dto.phoneNumber.replace(/-/g, '');
 
     let existing = await this.storeApplicationRepository.findOne({
@@ -56,21 +58,27 @@ export class StoreService {
       const isPending = existing.status === StoreApplicationStatus.PENDING;
 
       if (isRejected) {
-        existing = {
-          ...existing,
+        Object.assign(existing, {
           ...dto,
           phoneNumber,
           status: StoreApplicationStatus.PENDING,
           rejectionReason: null,
-        };
+        });
+
         return this.storeApplicationRepository.save(existing);
       }
 
       if (isPending) {
-        throw new StoreException('이미 대기 중인 신청이 있습니다.', HttpStatus.BAD_REQUEST);
+        throw new StoreException(
+          '이미 대기 중인 신청이 있습니다.',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
-      throw new StoreException('한 개의 전화번호는 한 개의 상점만 열 수 있습니다.', HttpStatus.BAD_REQUEST);
+      throw new StoreException(
+        '한 개의 전화번호는 한 개의 상점만 열 수 있습니다.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const application = this.storeApplicationRepository.create({
@@ -86,7 +94,10 @@ export class StoreService {
     });
 
     if (!store) {
-      throw new StoreException('잘못된 로그인 정보입니다.', HttpStatus.BAD_REQUEST);
+      throw new StoreException(
+        '잘못된 로그인 정보입니다.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const accessToken = await this.jwtService.signAsync(
@@ -97,7 +108,10 @@ export class StoreService {
     return { accessToken };
   }
 
-  async createProduct(storeId: number, dto: CreateProductDto): Promise<ProductEntity> {
+  async createProduct(
+    storeId: number,
+    dto: CreateProductDto,
+  ): Promise<ProductEntity> {
     const product = this.productRepository.create({
       ...dto,
       store: { id: storeId },
@@ -120,10 +134,18 @@ export class StoreService {
   }
 
   // 상품 활성화/비활성화
-  async toggleProductStatus(storeId: number, productId: number): Promise<ProductEntity> {
-    const product = await this.productRepository.findOne({ where: { id: productId, store: { id: storeId } } });
+  async toggleProductStatus(
+    storeId: number,
+    productId: number,
+  ): Promise<ProductEntity> {
+    const product = await this.productRepository.findOne({
+      where: { id: productId, store: { id: storeId } },
+    });
     if (!product) {
-      throw new StoreException('상품을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
+      throw new StoreException(
+        '상품을 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND,
+      );
     }
     product.isActive = !product.isActive;
     return await this.productRepository.save(product);
@@ -131,14 +153,23 @@ export class StoreService {
 
   // 상품 삭제(soft delete)
   async deleteProduct(storeId: number, productId: number): Promise<void> {
-    await this.productRepository.delete({id: productId, store: {id: storeId}})
+    await this.productRepository.delete({
+      id: productId,
+      store: { id: storeId },
+    });
   }
 
-  async createOrder(storeId: number, dto: CreateOrderDto): Promise<OrderEntity> {
+  async createOrder(
+    storeId: number,
+    dto: CreateOrderDto,
+  ): Promise<OrderEntity> {
     const { userId, orderItems } = dto;
 
     if (!orderItems?.length) {
-      throw new StoreException('주문 항목은 비어 있을 수 없습니다.', HttpStatus.BAD_REQUEST);
+      throw new StoreException(
+        '주문 항목은 비어 있을 수 없습니다.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     // 1. DTO에서 주문된 모든 상품의 ID 목록을 추출합니다.
@@ -184,7 +215,9 @@ export class StoreService {
     });
 
     // 6. 사용자의 지갑 정보를 조회하여 잔액을 확인합니다.
-    const user = await this.userRepository.findOne({ where: { githubId: userId } });
+    const user = await this.userRepository.findOne({
+      where: { githubId: userId },
+    });
     const walletInfo = await this.walletService.getWallet(user.id);
 
     if (walletInfo.balance < totalAmount) {
@@ -197,7 +230,10 @@ export class StoreService {
     });
 
     if (!store) {
-      throw new StoreException('상점을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
+      throw new StoreException(
+        '상점을 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     // 8. 먼저 주문(Order) 엔티티를 'PENDING' 상태로 생성합니다.
@@ -253,7 +289,10 @@ export class StoreService {
     });
 
     if (!order) {
-      throw new StoreException('주문을 찾을 수 없습니다.', HttpStatus.NOT_FOUND);
+      throw new StoreException(
+        '주문을 찾을 수 없습니다.',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     order.status = OrderStatus.COMPLETED;
