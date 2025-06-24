@@ -6,9 +6,11 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToMany,
+  BeforeInsert,
 } from 'typeorm';
 import { StoreEntity } from './store.entity';
 import { OrderItemEntity } from './order-item.entity';
+import { getCurrentKoreanTime } from 'src/common/util/date-fn';
 
 @Entity('product')
 export class ProductEntity {
@@ -41,4 +43,9 @@ export class ProductEntity {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @BeforeInsert()
+  setCreatedAt() {
+    this.createdAt = getCurrentKoreanTime();
+  }
 }

@@ -1,4 +1,4 @@
-import { formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { startOfDay, endOfDay } from 'date-fns';
 
 export const generateToday = () => {
@@ -9,12 +9,13 @@ export const generateToday = () => {
 
 export const getCurrentKoreanTime = () => {
   const timeZone = 'Asia/Seoul';
-  return new Date(formatInTimeZone(new Date(), timeZone, 'yyyy-MM-dd HH:mm:ss'));
+  const utcDate = new Date();
+  return toZonedTime(utcDate, timeZone);
 };
 
 export const formattedDate = (date: Date, format: string) => {
   const timeZone = 'Asia/Seoul';
-  if(!date) return null;
+  if (!date) return null;
   return formatInTimeZone(date, timeZone, format);
 };
 

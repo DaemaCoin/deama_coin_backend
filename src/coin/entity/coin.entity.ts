@@ -1,11 +1,13 @@
+import { toZonedTime } from 'date-fns-tz';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { getCurrentKoreanTime } from 'src/common/util/date-fn';
 import {
   Column,
-  CreateDateColumn,
   Entity,
   ManyToOne,
   PrimaryColumn,
   Index,
+  BeforeInsert,
 } from 'typeorm';
 
 export enum CoinType {
@@ -38,4 +40,9 @@ export class CoinEntity {
 
   @Column({ nullable: false })
   createdAt: Date;
+
+  @BeforeInsert()
+  setCreatedAt() {
+    this.createdAt = getCurrentKoreanTime();
+  }
 }

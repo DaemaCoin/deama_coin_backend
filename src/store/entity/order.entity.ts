@@ -7,10 +7,12 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  BeforeInsert,
 } from 'typeorm';
 import { StoreEntity } from './store.entity';
 import { OrderItemEntity } from './order-item.entity';
 import { UserEntity } from 'src/auth/entity/user.entity';
+import { getCurrentKoreanTime } from 'src/common/util/date-fn';
 
 export enum OrderStatus {
   PENDING = 'PENDING',
@@ -50,4 +52,9 @@ export class OrderEntity {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @BeforeInsert()
+  setCreatedAt() {
+    this.createdAt = getCurrentKoreanTime();
+  }
 }

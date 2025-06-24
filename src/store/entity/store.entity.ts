@@ -1,6 +1,15 @@
-import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  BeforeInsert,
+} from 'typeorm';
 import { ProductEntity } from './product.entity';
 import { OrderEntity } from './order.entity';
+import { getCurrentKoreanTime } from 'src/common/util/date-fn';
 
 @Entity('store')
 export class StoreEntity {
@@ -36,4 +45,9 @@ export class StoreEntity {
 
   @UpdateDateColumn()
   updatedAt: Date;
-} 
+
+  @BeforeInsert()
+  setCreatedAt() {
+    this.createdAt = getCurrentKoreanTime();
+  }
+}
