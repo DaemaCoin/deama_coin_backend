@@ -8,7 +8,11 @@ import { GeminiUtilService } from 'src/util-module/gemini/gemini.service';
 import { WalletService } from 'src/wallet/wallet.service';
 import { RedisUtilService } from 'src/util-module/redis/redis-util.service';
 import { UserNotFoundException } from 'src/exception/custom-exception/user-not-found.exception';
-import { formattedDate, generateToday, getTodayUtcRange } from 'src/common/util/date-fn';
+import {
+  formattedDate,
+  generateToday,
+  getTodayUtcRange,
+} from 'src/common/util/date-fn';
 import { AlreadyCoinExistException } from 'src/exception/custom-exception/already-coin-exist.exception';
 import { InsufficientBalanceException } from 'src/exception/custom-exception/insufficient-balance.exception';
 import { TransferRequest } from 'src/common/util/transfer.request.dto';
@@ -33,23 +37,32 @@ export class CoinService {
 
   async commitHook(fullName: string, commitIds: string[]) {
     const today = generateToday();
+    const failedCommits: string[] = [];
 
-    const results = await Promise.allSettled(
-      commitIds.map((commitId) => this._processCommit(fullName, commitId, today)),
-    );
-
-    const failedCommits = results
-      .map((res, i) => (res.status === 'rejected' ? commitIds[i] : null))
-      .filter((v): v is string => v !== null);
+    for (const commitId of commitIds) {
+      try {
+        await this._processCommit(fullName, commitId, today);
+      } catch (error) {
+        console.warn(`커밋 처리 실패: ${commitId}`, error);
+        failedCommits.push(commitId);
+      }
+    }
 
     if (failedCommits.length > 0) {
       console.warn(`일부 커밋 처리 실패: ${failedCommits.join(', ')}`);
     }
   }
 
-  private async _processCommit(fullName: string, commitId: string, today: string) {
+  private async _processCommit(
+    fullName: string,
+    commitId: string,
+    today: string,
+  ) {
     try {
-      const commitData = await this.githubService.getCommitData(fullName, commitId);
+      const commitData = await this.githubService.getCommitData(
+        fullName,
+        commitId,
+      );
 
       const coin = await this.coinRepository.findOne({
         where: { id: commitData.sha },
@@ -58,12 +71,20 @@ export class CoinService {
 
       const commitPatch = commitData.files.map((file) => file.patch).join(', ');
       const commitScore = await this.geminiService.getCommitScore(commitPatch);
-  
+
       const user = await this._findUserByGithubId(commitData.author.login);
-      const actualCoinAmount = this._calculateCoinAmount(user, commitScore, today);
-  
-      await this.walletService.postReward(user.id, commitData.sha, actualCoinAmount);
-  
+      const actualCoinAmount = this._calculateCoinAmount(
+        user,
+        commitScore,
+        today,
+      );
+
+      await this.walletService.postReward(
+        user.id,
+        commitData.sha,
+        actualCoinAmount,
+      );
+
       await this.coinRepository.save({
         id: commitData.sha,
         amount: actualCoinAmount,
@@ -72,7 +93,7 @@ export class CoinService {
         type: CoinType.MINING,
         user: { id: user.id },
       });
-  
+
       await this._updateUserCoinInfo(user, actualCoinAmount, today);
 
       try {
@@ -94,7 +115,11 @@ export class CoinService {
     return user;
   }
 
-  private _calculateCoinAmount(user: UserEntity, commitScore: number, today: string): number {
+  private _calculateCoinAmount(
+    user: UserEntity,
+    commitScore: number,
+    today: string,
+  ): number {
     const lastCoinDate = formattedDate(user.lastCoinDate, 'yyyy-MM-dd');
     if (!lastCoinDate || lastCoinDate !== today) {
       user.dailyCoinAmount = 0;
@@ -104,7 +129,11 @@ export class CoinService {
     return Math.min(commitScore, remaining);
   }
 
-  private async _updateUserCoinInfo(user: UserEntity, coinAmount: number, today: string) {
+  private async _updateUserCoinInfo(
+    user: UserEntity,
+    coinAmount: number,
+    today: string,
+  ) {
     try {
       await this.userRepository.update(user.id, {
         totalCommits: user.totalCommits + 1,
@@ -112,7 +141,9 @@ export class CoinService {
         lastCoinDate: user.lastCoinDate,
       });
     } catch (error) {
-      console.error(`사용자 정보 업데이트 실패 (userId: ${user.id}): ${error.message}`);
+      console.error(
+        `사용자 정보 업데이트 실패 (userId: ${user.id}): ${error.message}`,
+      );
       throw error;
     }
   }
@@ -130,14 +161,19 @@ export class CoinService {
       await this.redisService.setJson(cacheKey, result, this.CACHE_TTL);
       return result;
     } catch (error) {
-      console.error(`코인 히스토리 조회 실패 (userId: ${userId}, page: ${page}): ${error.message}`);
+      console.error(
+        `코인 히스토리 조회 실패 (userId: ${userId}, page: ${page}): ${error.message}`,
+      );
       // 캐시 실패 시에도 DB에서 데이터는 반환
       const history = await this._fetchCoinHistoryFromDB(userId, page);
       return { history };
     }
   }
 
-  private async _fetchCoinHistoryFromDB(userId: string, page: number): Promise<CoinEntity[]> {
+  private async _fetchCoinHistoryFromDB(
+    userId: string,
+    page: number,
+  ): Promise<CoinEntity[]> {
     try {
       return await this.coinRepository.find({
         where: { user: { id: userId } },
@@ -146,18 +182,28 @@ export class CoinService {
         take: this.PAGE_SIZE,
       });
     } catch (error) {
-      console.error(`DB에서 코인 히스토리 조회 실패 (userId: ${userId}, page: ${page}): ${error.message}`);
+      console.error(
+        `DB에서 코인 히스토리 조회 실패 (userId: ${userId}, page: ${page}): ${error.message}`,
+      );
       throw error;
     }
   }
 
   async getTodayMinedCoins(userId: string) {
     const { utcStart, utcEnd } = getTodayUtcRange();
-    const totalAmount = await this._getTodayCoinsFromDB(userId, utcStart, utcEnd);
+    const totalAmount = await this._getTodayCoinsFromDB(
+      userId,
+      utcStart,
+      utcEnd,
+    );
     return { totalAmount };
   }
 
-  private async _getTodayCoinsFromDB(userId: string, start: Date, end: Date): Promise<number> {
+  private async _getTodayCoinsFromDB(
+    userId: string,
+    start: Date,
+    end: Date,
+  ): Promise<number> {
     try {
       const todayCoins = await this.coinRepository
         .createQueryBuilder('coin')
@@ -169,24 +215,31 @@ export class CoinService {
 
       return Number(todayCoins?.totalAmount || 0);
     } catch (error) {
-      console.error(`DB에서 오늘 채굴된 코인 개수 조회 실패 (userId: ${userId}): ${error.message}`);
+      console.error(
+        `DB에서 오늘 채굴된 코인 개수 조회 실패 (userId: ${userId}): ${error.message}`,
+      );
       throw error;
     }
   }
 
-  private async _recordTransfer(fromUserId: string, toUserId: string, amount: number) {
+  private async _recordTransfer(
+    fromUserId: string,
+    toUserId: string,
+    amount: number,
+  ) {
     const MAX_RETRIES = 3;
     const RETRY_DELAY = 1000;
-    
+
     for (let retryCount = 0; retryCount < MAX_RETRIES; retryCount++) {
-      const queryRunner = this.coinRepository.manager.connection.createQueryRunner();
-      
+      const queryRunner =
+        this.coinRepository.manager.connection.createQueryRunner();
+
       try {
         await queryRunner.connect();
         await queryRunner.startTransaction();
-        
+
         const transferHash = `transfer_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-        
+
         // 송금자 기록 (음수로 저장)
         await queryRunner.manager.save(CoinEntity, {
           id: `${transferHash}_from`,
@@ -208,25 +261,34 @@ export class CoinService {
         });
 
         await queryRunner.commitTransaction();
-        
+
         // 트랜잭션 성공 후 캐시 무효화
         await Promise.all([
-          this.redisService.deleteByPattern(`${this.CACHE_PREFIX}${fromUserId}:*`),
-          this.redisService.deleteByPattern(`${this.CACHE_PREFIX}${toUserId}:*`),
+          this.redisService.deleteByPattern(
+            `${this.CACHE_PREFIX}${fromUserId}:*`,
+          ),
+          this.redisService.deleteByPattern(
+            `${this.CACHE_PREFIX}${toUserId}:*`,
+          ),
         ]);
 
-        console.log(`이체 기록 저장 완료 (from: ${fromUserId}, to: ${toUserId}, amount: ${amount})`);
+        console.log(
+          `이체 기록 저장 완료 (from: ${fromUserId}, to: ${toUserId}, amount: ${amount})`,
+        );
         return; // 성공 시 함수 종료
-        
       } catch (error) {
         await queryRunner.rollbackTransaction();
-        
+
         if (retryCount < MAX_RETRIES - 1) {
-          console.warn(`이체 기록 저장 실패, ${retryCount + 1}번째 재시도... (from: ${fromUserId}, to: ${toUserId}, amount: ${amount}): ${error.message}`);
-          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+          console.warn(
+            `이체 기록 저장 실패, ${retryCount + 1}번째 재시도... (from: ${fromUserId}, to: ${toUserId}, amount: ${amount}): ${error.message}`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
           continue;
         } else {
-          console.error(`이체 기록 저장 최종 실패 (from: ${fromUserId}, to: ${toUserId}, amount: ${amount}): ${error.message}`);
+          console.error(
+            `이체 기록 저장 최종 실패 (from: ${fromUserId}, to: ${toUserId}, amount: ${amount}): ${error.message}`,
+          );
           throw error;
         }
       } finally {
@@ -245,17 +307,23 @@ export class CoinService {
 
       // 계좌 잔액 확인
       const fromUserBalance = await this.walletService.getWallet(fromUserId);
-      if(fromUserBalance.balance < amount) throw new InsufficientBalanceException();
+      if (fromUserBalance.balance < amount)
+        throw new InsufficientBalanceException();
 
       // WalletService를 통해 실제 이체 수행
-      const result = await this.walletService.transfer(fromUserId, transferRequest);
+      const result = await this.walletService.transfer(
+        fromUserId,
+        transferRequest,
+      );
 
       // 이체 기록을 coinRepository에 저장
       await this._recordTransfer(fromUserId, to, Number(amount));
 
       return result;
     } catch (error) {
-      console.error(`코인 이체 실패 (from: ${fromUserId}, to: ${to}, amount: ${amount}): ${error.message}`);
+      console.error(
+        `코인 이체 실패 (from: ${fromUserId}, to: ${to}, amount: ${amount}): ${error.message}`,
+      );
       throw error;
     }
   }
