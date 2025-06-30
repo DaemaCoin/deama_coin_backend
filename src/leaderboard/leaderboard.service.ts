@@ -49,12 +49,23 @@ export class LeaderboardService implements OnModuleInit {
         }),
       );
 
-      const filtered = leaderboard.filter((u) => u.status == 'fulfilled');
+      const filtered = leaderboard.filter(
+        (
+          u,
+        ): u is PromiseFulfilledResult<{
+          userId: string;
+          githubId: string;
+          profileImageUrl: string;
+          totalCoins: number;
+        }> => u.status === 'fulfilled' && u.value !== null,
+      );
 
-      const ranked = filtered
-        .sort((a: any, b: any) => b.totalCoins - a.totalCoins)
-        .map((fulfilledValue, index) => ({
-          ...fulfilledValue.value,
+      const fulfilledValues = filtered.map((u) => u.value);
+
+      const ranked = fulfilledValues
+        .sort((a, b) => b.totalCoins - a.totalCoins)
+        .map((user, index) => ({
+          ...user,
           rank: index + 1,
         }));
 
@@ -70,9 +81,10 @@ export class LeaderboardService implements OnModuleInit {
     }
   }
 
-  async getLeaderboard(
-  ): Promise<LeaderboardResponseDto> {
-    const cached = await this.redisService.getJson<LeaderboardItemDto[]>(this.LEADERBOARD_CACHE_KEY);
+  async getLeaderboard(): Promise<LeaderboardResponseDto> {
+    const cached = await this.redisService.getJson<LeaderboardItemDto[]>(
+      this.LEADERBOARD_CACHE_KEY,
+    );
     if (!cached) {
       this.cacheWalletLeaderboard();
       throw new LeaderBoardNotCachedException();
