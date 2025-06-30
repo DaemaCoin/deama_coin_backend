@@ -16,5 +16,6 @@ export const configModule = ConfigModule.forRoot({
     REDIS_HOST: Joi.string().required(),
     REDIS_PORT: Joi.number().required(),
     ADMIN_API_KEY: Joi.string().required(),
+    GIT_TOKEN: Joi.string().required(),
   }),
 });

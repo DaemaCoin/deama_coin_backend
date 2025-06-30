@@ -92,6 +92,7 @@ export class GithubService {
   }
 
   async getCommitData(fullName: string, commitId: string): Promise<any> {
+    const GIT_TOKEN = await this.configService.get(EnvKeys.GIT_TOKEN);
     return await this.githubClient.fetch<any>(
       `https://api.github.com/repos/${fullName}/commits/${commitId}`,
       [200],
@@ -99,6 +100,7 @@ export class GithubService {
         method: FetchMethod.GET,
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GIT_TOKEN}`
         },
       },
     );

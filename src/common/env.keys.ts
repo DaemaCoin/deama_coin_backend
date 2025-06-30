@@ -24,4 +24,5 @@ export enum EnvKeys {
 
   ADMIN_API_KEY = 'ADMIN_API_KEY',
   GEMINI_KEY = 'GEMINI_KEY',
+  GIT_TOKEN = 'GIT_TOKEN',
 }
